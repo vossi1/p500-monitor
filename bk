@@ -1,0 +1,4 @@
+#!/bin/sh
+acme -v kernal.b
+diff -s kernal.prg original/kernal-fe00.prg
+cmp kernal.prg original/kernal-fe00.prg

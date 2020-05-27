@@ -1,0 +1,276 @@
+; disassembled by DASM6502b v.3.1 by Marat Fayzullin
+; modified by Vossi 02/2019
+!cpu 6502
+*= $fe00
+lfe00:	pha
+lfe01:	txa
+lfe02:	pha
+lfe03:	tya
+lfe04:	pha
+lfe05:	lda #$07
+lfe07:	sta $41
+lfe09:	lda #$de
+lfe0b:	sta $42
+lfe0d:	tsx
+lfe0e:	lda $0104,x
+lfe11:	and #$10
+lfe13:	beq lfe18
+lfe15:	jmp $e003
+lfe18:	lda $01
+lfe1a:	pha
+lfe1b:	cld
+lfe1c:	ldy #$00
+lfe1e:	lda #$0f
+lfe20:	sta $01
+lfe22:	lda ($41),y
+lfe24:	beq lfe34
+lfe26:	and #$1e
+lfe28:	bne lfe30
+lfe2a:	jsr $fe3d
+lfe2d:	jsr $fe46
+lfe30:	ldy #$00
+lfe32:	sta ($41),y
+lfe34:	pla
+lfe35:	sta $01
+lfe37:	pla
+lfe38:	tay
+lfe39:	pla
+lfe3a:	tax
+lfe3b:	pla
+lfe3c:	rti
+lfe3d:	lda #$e0
+lfe3f:	pha
+lfe40:	lda #$15
+lfe42:	pha
+lfe43:	jmp $ff35
+lfe46:	lda #$f9
+lfe48:	pha
+lfe49:	lda #$7b
+lfe4b:	pha
+lfe4c:	jmp $ff35
+lfe4f:	pha
+lfe50:	txa
+lfe51:	pha
+lfe52:	tya
+lfe53:	pha
+lfe54:	ldy #$00
+lfe56:	ldx $01
+lfe58:	stx $30
+lfe5a:	ldx $00
+lfe5c:	stx $01
+lfe5e:	tsx
+lfe5f:	inc $0104,x
+lfe62:	bne lfe67
+lfe64:	inc $0105,x
+lfe67:	lda $0104,x
+lfe6a:	sta $ce
+lfe6c:	lda $0105,x
+lfe6f:	sta $cf
+lfe71:	lda ($ce),y
+lfe73:	beq lfe7a
+lfe75:	jsr $ffd2
+lfe78:	bcc lfe5e
+lfe7a:	ldx $30
+lfe7c:	stx $01
+lfe7e:	pla
+lfe7f:	tay
+lfe80:	pla
+lfe81:	tax
+lfe82:	pla
+lfe83:	rts
+lfe84:	brk
+lfe85:	brk
+lfe86:	brk
+lfe87:	brk
+lfe88:	brk
+lfe89:	brk
+lfe8a:	brk
+lfe8b:	brk
+lfe8c:	brk
+lfe8d:	brk
+lfe8e:	brk
+lfe8f:	brk
+lfe90:	brk
+lfe91:	brk
+lfe92:	brk
+lfe93:	brk
+lfe94:	brk
+lfe95:	brk
+lfe96:	brk
+lfe97:	brk
+lfe98:	brk
+lfe99:	brk
+lfe9a:	brk
+lfe9b:	brk
+lfe9c:	brk
+lfe9d:	sta $01
+lfe9f:	txa
+lfea0:	clc
+lfea1:	adc #$02
+lfea3:	bcc lfea6
+lfea5:	iny
+lfea6:	tax
+lfea7:	tya
+lfea8:	pha
+lfea9:	txa
+lfeaa:	pha
+lfeab:	jsr $ff19
+lfeae:	lda #$fe
+lfeb0:	sta ($ac),y
+lfeb2:	php
+lfeb3:	sei
+lfeb4:	pha
+lfeb5:	txa
+lfeb6:	pha
+lfeb7:	tya
+lfeb8:	pha
+lfeb9:	jsr $ff19
+lfebc:	tay
+lfebd:	lda $00
+lfebf:	jsr $ff2a
+lfec2:	lda #$04
+lfec4:	ldx #$ff
+lfec6:	jsr $ff24
+lfec9:	tsx
+lfeca:	lda $0105,x
+lfecd:	sec
+lfece:	sbc #$03
+lfed0:	pha
+lfed1:	lda $0106,x
+lfed4:	sbc #$00
+lfed6:	tax
+lfed7:	pla
+lfed8:	jsr $ff24
+lfedb:	tya
+lfedc:	sec
+lfedd:	sbc #$04
+lfedf:	sta $01ff
+lfee2:	tay
+lfee3:	ldx #$04
+lfee5:	pla
+lfee6:	iny
+lfee7:	sta ($ac),y
+lfee9:	dex
+lfeea:	bne lfee5
+lfeec:	ldy $01ff
+lfeef:	lda #$2d
+lfef1:	ldx #$ff
+lfef3:	jsr $ff24
+lfef6:	pla
+lfef7:	pla
+lfef8:	tsx
+lfef9:	stx $01ff
+lfefc:	tya
+lfefd:	tax
+lfefe:	txs
+lfeff:	lda $01
+lff01:	jmp $fff6
+lff04:	nop
+lff05:	php
+lff06:	php
+lff07:	sei
+lff08:	pha
+lff09:	txa
+lff0a:	pha
+lff0b:	tya
+lff0c:	pha
+lff0d:	tsx
+lff0e:	lda $0106,x
+lff11:	sta $01
+lff13:	jsr $ff19
+lff16:	jmp $fedc
+lff19:	ldy #$01
+lff1b:	sty $ad
+lff1d:	dey
+lff1e:	sty $ac
+lff20:	dey
+lff21:	lda ($ac),y
+lff23:	rts
+lff24:	pha
+lff25:	txa
+lff26:	sta ($ac),y
+lff28:	dey
+lff29:	pla
+lff2a:	sta ($ac),y
+lff2c:	dey
+lff2d:	rts
+lff2e:	pla
+lff2f:	tay
+lff30:	pla
+lff31:	tax
+lff32:	pla
+lff33:	plp
+lff34:	rts
+lff35:	php
+lff36:	sei
+lff37:	pha
+lff38:	lda #$0f
+lff3a:	sta $01
+lff3c:	jmp $feb5
+lff3f:	jmp $fe4f
+lff42:	jmp $0000
+lff45:	jmp $0000
+lff48:	jmp $0000
+lff4b:	jmp $0000
+lff4e:	jmp $0000
+lff51:	jmp $0000
+lff54:	jmp $0000
+lff57:	jmp $0000
+lff5a:	jmp $0000
+lff5d:	jmp $0000
+lff60:	jmp $0000
+lff63:	jmp $0000
+lff66:	jmp $0000
+lff69:	jmp $0000
+lff6c:	jsr $ff35
+lff6f:	jsr $ff35
+lff72:	jsr $ff35
+lff75:	jsr $ff35
+lff78:	jsr $ff35
+lff7b:	jsr $ff35
+lff7e:	jsr $ff35
+lff81:	jsr $ff35
+lff84:	jsr $ff35
+lff87:	jsr $ff35
+lff8a:	jsr $ff35
+lff8d:	jsr $ff35
+lff90:	jsr $ff35
+lff93:	jsr $ff35
+lff96:	jsr $ff35
+lff99:	jsr $ff35
+lff9c:	jsr $ff35
+lff9f:	jsr $ff35
+lffa2:	jsr $ff35
+lffa5:	jsr $ff35
+lffa8:	jsr $ff35
+lffab:	jsr $ff35
+lffae:	jsr $ff35
+lffb1:	jsr $ff35
+lffb4:	jsr $ff35
+lffb7:	jsr $ff35
+lffba:	jsr $ff35
+lffbd:	jsr $ff35
+lffc0:	jsr $ff35
+lffc3:	jsr $ff35
+lffc6:	jsr $ff35
+lffc9:	jsr $ff35
+lffcc:	jsr $ff35
+lffcf:	jsr $ff35
+lffd2:	jsr $ff35
+lffd5:	jsr $ff35
+lffd8:	jsr $ff35
+lffdb:	jsr $ff35
+lffde:	jsr $ff35
+lffe1:	jsr $ff35
+lffe4:	jsr $ff35
+lffe7:	jsr $ff35
+lffea:	jsr $ff35
+lffed:	jsr $ff35
+lfff0:	jsr $ff35
+lfff3:	jsr $ff35
+lfff6:	sta $00
+lfff8:	rts
+lfff9:	ora ($31,x)
+lfffb:	!byte $fb
+lfffc:	!byte $97
+lfffd:	sbc $fe00,y

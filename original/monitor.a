@@ -1,0 +1,2504 @@
+; disassembled by DASM6502b v.3.1 by Marat Fayzullin
+; modified by Vossi 02/2019
+!cpu 6502
+*= $e000
+le000:	jmp $e021
+le003:	jmp $e009
+le006:	jmp $e0b2
+le009:	jsr $ff3f
+le00c:	ora $5242
+le00f:	eor $41
+le011:	!byte $4b
+le012:	!byte $07
+le013:	brk
+le014:	nop
+le015:	nop
+le016:	nop
+le017:	ldx #$05
+le019:	pla
+le01a:	sta $03,x
+le01c:	dex
+le01d:	bpl le019
+le01f:	bmi le046
+le021:	jsr $eb72
+le024:	lda #$00
+le026:	sta $06
+le028:	sta $07
+le02a:	sta $08
+le02c:	sta $05
+le02e:	lda #$00
+le030:	ldy #$e0
+le032:	sta $04
+le034:	sty $03
+le036:	lda $00
+le038:	sta $02
+le03a:	jsr $ff3f
+le03d:	ora $4f4d
+le040:	lsr $5449
+le043:	!byte $4f
+le044:	!byte $52
+le045:	brk
+le046:	cld
+le047:	tsx
+le048:	stx $09
+le04a:	lda #$c0
+le04c:	jsr $ff90
+le04f:	cli
+le050:	jsr $ff3f
+le053:	ora $2020
+le056:	jsr $5020
+le059:	!byte $43
+le05a:	jsr $5320
+le05d:	!byte $52
+le05e:	jsr $4341
+le061:	jsr $5258
+le064:	jsr $5259
+le067:	jsr $5053
+le06a:	ora $203b
+le06d:	!byte $1b
+le06e:	eor ($00),y
+le070:	lda $02
+le072:	jsr $e8d2
+le075:	txa
+le076:	jsr $ffd2
+le079:	lda $03
+le07b:	jsr $e8c2
+le07e:	ldy #$02
+le080:	lda $0002,y
+le083:	jsr $e8a5
+le086:	iny
+le087:	cpy #$08
+le089:	bcc le080
+le08b:	jsr $e8b4
+le08e:	ldx #$00
+le090:	stx $7a
+le092:	jsr $ffcf
+le095:	sta $0200,x
+le098:	inx
+le099:	cpx #$a1
+le09b:	bcs le0bc
+le09d:	cmp #$0d
+le09f:	bne le092
+le0a1:	lda #$00
+le0a3:	sta $01ff,x
+le0a6:	jsr $e8e9
+le0a9:	beq le08b
+le0ab:	cmp #$20
+le0ad:	beq le0a6
+le0af:	nop
+le0b0:	nop
+le0b1:	nop
+le0b2:	ldx #$15
+le0b4:	cmp $e0e6,x
+le0b7:	beq le0c5
+le0b9:	dex
+le0ba:	bpl le0b4
+le0bc:	jsr $ff3f
+le0bf:	ora $003f,x
+le0c2:	jmp $e08b
+le0c5:	cpx #$13
+le0c7:	bcs le0db
+le0c9:	cpx #$0f
+le0cb:	bcs le0e0
+le0cd:	txa
+le0ce:	asl
+le0cf:	tax
+le0d0:	lda $e0fd,x
+le0d3:	pha
+le0d4:	lda $e0fc,x
+le0d7:	pha
+le0d8:	jmp $e7a7
+le0db:	sta $93
+le0dd:	jmp $e337
+le0e0:	jmp $e9b1
+le0e3:	rts
+le0e4:	brk
+le0e5:	brk
+le0e6:	eor ($43,x)
+le0e8:	!byte $44
+le0e9:	lsr $47
+le0eb:	pha
+le0ec:	lsr
+le0ed:	eor $5452
+le0f0:	cli
+le0f1:	rti
+le0f2:	rol $3b3e
+le0f5:	bit $2b
+le0f7:	rol $25
+le0f9:	jmp $5653
+le0fc:	ora $e4
+le0fe:	bmi le0e2
+le100:	tya
+le101:	sbc $da
+le103:	!byte $e3
+le104:	cmp $e1,x
+le106:	cmp $0be2
+le109:	cpx $e151
+le10c:	!byte $4f
+le10d:	cpx #$33
+le10f:	!byte $e2
+le110:	!byte $e2
+le111:	cpx #$8f
+le113:	nop
+le114:	ora $e4
+le116:	tax
+le117:	sbc ($93,x)
+le119:	sbc ($20,x)
+le11b:	!byte $2f
+le11c:	sbc ($b1,x)
+le11e:	ror $4c
+le120:	!byte $27
+le121:	sbc ($20,x)
+le123:	!byte $2f
+le124:	sbc ($91,x)
+le126:	ror $a6
+le128:	bmi le0b0
+le12a:	ora ($ae,x)
+le12c:	!byte $b2
+le12d:	!byte $03
+le12e:	rts
+le12f:	stx $03b2
+le132:	ldx $01
+le134:	stx $30
+le136:	ldx $68
+le138:	stx $01
+le13a:	rts
+le13b:	ldx $01
+le13d:	lda #$0f
+le13f:	sta $01
+le141:	ldy #$9c
+le143:	lda ($5d),y
+le145:	stx $01
+le147:	rts
+le148:	!byte $ff
+le149:	!byte $ff
+le14a:	!byte $ff
+le14b:	!byte $ff
+le14c:	!byte $ff
+le14d:	!byte $ff
+le14e:	!byte $ff
+le14f:	!byte $ff
+le150:	!byte $ff
+le151:	!byte $ff
+le152:	bcs le15c
+le154:	jsr $e901
+le157:	jsr $e7a7
+le15a:	bcc le162
+le15c:	lda #$0b
+le15e:	sta $60
+le160:	bne le177
+le162:	jsr $e90e
+le165:	bcc le191
+le167:	ldx #$03
+le169:	bit $d7
+le16b:	bpl le16e
+le16d:	inx
+le16e:	lsr $62
+le170:	ror $61
+le172:	ror $60
+le174:	dex
+le175:	bne le16e
+le177:	jsr $ffe1
+le17a:	beq le18e
+le17c:	jsr $e1e8
+le17f:	lda #$08
+le181:	bit $d7
+le183:	bpl le186
+le185:	asl
+le186:	jsr $e952
+le189:	jsr $e922
+le18c:	bcs le177
+le18e:	jmp $e08b
+le191:	jmp $e0bc
+le194:	jsr $e974
+le197:	ldy #$00
+le199:	jsr $e7a7
+le19c:	bcs le1a8
+le19e:	lda $60
+le1a0:	sta $0005,y
+le1a3:	iny
+le1a4:	cpy #$05
+le1a6:	bcc le199
+le1a8:	jmp $e08b
+le1ab:	bcs le1c9
+le1ad:	jsr $e901
+le1b0:	ldy #$00
+le1b2:	jsr $e7a7
+le1b5:	bcs le1c9
+le1b7:	lda $60
+le1b9:	jsr $e122
+le1bc:	iny
+le1bd:	bit $d7
+le1bf:	bpl le1c5
+le1c1:	cpy #$10
+le1c3:	bcc le1b2
+le1c5:	cpy #$08
+le1c7:	bcc le1b2
+le1c9:	jsr $ff3f
+le1cc:	!byte $1b
+le1cd:	!byte $4f
+le1ce:	sta ($00),y
+le1d0:	jsr $e1e8
+le1d3:	jmp $e08b
+le1d6:	jsr $e974
+le1d9:	ldx $09
+le1db:	txs
+le1dc:	jmp $ec3e
+le1df:	nop
+le1e0:	nop
+le1e1:	nop
+le1e2:	nop
+le1e3:	nop
+le1e4:	nop
+le1e5:	nop
+le1e6:	nop
+le1e7:	nop
+le1e8:	jsr $e8b4
+le1eb:	lda #$3e
+le1ed:	jsr $ffd2
+le1f0:	jsr $e892
+le1f3:	ldy #$00
+le1f5:	beq le1fa
+le1f7:	jsr $e8a8
+le1fa:	jsr $e11a
+le1fd:	jsr $e8c2
+le200:	iny
+le201:	cpy #$08
+le203:	bit $d7
+le205:	bpl le209
+le207:	cpy #$10
+le209:	bcc le1f7
+le20b:	jsr $ff3f
+le20e:	!byte $3a
+le20f:	!byte $12
+le210:	brk
+le211:	ldy #$00
+le213:	jsr $e11a
+le216:	pha
+le217:	and #$7f
+le219:	cmp #$20
+le21b:	pla
+le21c:	bcs le220
+le21e:	lda #$2e
+le220:	jsr $ffd2
+le223:	iny
+le224:	bit $d7
+le226:	bpl le22c
+le228:	cpy #$10
+le22a:	bcc le213
+le22c:	cpy #$08
+le22e:	bcc le213
+le230:	rts
+le231:	lda #$00
+le233:	bit $80a9
+le236:	sta $93
+le238:	lda #$00
+le23a:	sta $03b3
+le23d:	jsr $e983
+le240:	bcs le247
+le242:	jsr $e7a7
+le245:	bcc le24a
+le247:	jmp $e0bc
+le24a:	bit $93
+le24c:	bpl le27a
+le24e:	sec
+le24f:	lda $66
+le251:	sbc $60
+le253:	lda $67
+le255:	sbc $61
+le257:	bcs le27a
+le259:	lda $63
+le25b:	adc $60
+le25d:	sta $60
+le25f:	lda $64
+le261:	adc $61
+le263:	sta $61
+le265:	lda $65
+le267:	adc $62
+le269:	sta $62
+le26b:	ldx #$02
+le26d:	lda $03b7,x
+le270:	sta $66,x
+le272:	dex
+le273:	bpl le26d
+le275:	lda #$80
+le277:	sta $03b3
+le27a:	jsr $e8b4
+le27d:	ldy #$00
+le27f:	jsr $ffe1
+le282:	beq le2cb
+le284:	jsr $e11a
+le287:	sta $5f
+le289:	ldx $01
+le28b:	lda $62
+le28d:	sta $01
+le28f:	lda ($60),y
+le291:	bit $93
+le293:	bpl le299
+le295:	lda $5f
+le297:	sta ($60),y
+le299:	stx $01
+le29b:	cmp $5f
+le29d:	nop
+le29e:	nop
+le29f:	beq le2aa
+le2a1:	jsr $e892
+le2a4:	jsr $e8a8
+le2a7:	jsr $e8a8
+le2aa:	bit $03b3
+le2ad:	bmi le2ba
+le2af:	inc $60
+le2b1:	bne le2c3
+le2b3:	inc $61
+le2b5:	bne le2c3
+le2b7:	jmp $e0bc
+le2ba:	jsr $e922
+le2bd:	jsr $e960
+le2c0:	jmp $e2c6
+le2c3:	jsr $e950
+le2c6:	jsr $e93c
+le2c9:	bcs le27f
+le2cb:	jmp $e08b
+le2ce:	jsr $e983
+le2d1:	bcs le334
+le2d3:	ldy #$00
+le2d5:	jsr $e8e9
+le2d8:	cmp #$27
+le2da:	bne le2f2
+le2dc:	jsr $e8e9
+le2df:	cmp #$00
+le2e1:	beq le334
+le2e3:	sta $0380,y
+le2e6:	iny
+le2e7:	jsr $e8e9
+le2ea:	beq le307
+le2ec:	cpy #$20
+le2ee:	bne le2e3
+le2f0:	beq le307
+le2f2:	sty $0100
+le2f5:	jsr $e7a5
+le2f8:	lda $60
+le2fa:	sta $0380,y
+le2fd:	iny
+le2fe:	jsr $e7a7
+le301:	bcs le307
+le303:	cpy #$20
+le305:	bne le2f8
+le307:	sty $93
+le309:	jsr $e8b4
+le30c:	ldy #$00
+le30e:	jsr $e11a
+le311:	cmp $0380,y
+le314:	bne le324
+le316:	iny
+le317:	cpy $93
+le319:	bne le30e
+le31b:	jsr $e892
+le31e:	jsr $e8a8
+le321:	jsr $e8a8
+le324:	jsr $ffe1
+le327:	beq le331
+le329:	jsr $e950
+le32c:	jsr $e93c
+le32f:	bcs le30c
+le331:	jmp $e08b
+le334:	jmp $e0bc
+le337:	jsr $ebae
+le33a:	jsr $e8e9
+le33d:	beq le3a3
+le33f:	cmp #$20
+le341:	beq le33a
+le343:	cmp #$22
+le345:	bne le35c
+le347:	ldx $7a
+le349:	lda $0200,x
+le34c:	beq le3a3
+le34e:	inx
+le34f:	cmp #$22
+le351:	beq le35f
+le353:	sta ($90),y
+le355:	inc $9d
+le357:	iny
+le358:	cpy #$11
+le35a:	bcc le349
+le35c:	jmp $e0bc
+le35f:	stx $7a
+le361:	jsr $e8e9
+le364:	beq le3a3
+le366:	jsr $e7a7
+le369:	bcs le3a3
+le36b:	lda $60
+le36d:	sta $9f
+le36f:	jsr $e7a7
+le372:	bcs le3a3
+le374:	jsr $e901
+le377:	jsr $e7a7
+le37a:	bcs le3a9
+le37c:	jsr $e8b4
+le37f:	lda $93
+le381:	cmp #$53
+le383:	bne le35c
+le385:	lda #$00
+le387:	sta $a0
+le389:	ldx #$02
+le38b:	lda $66,x
+le38d:	sta $99,x
+le38f:	lda $60,x
+le391:	sta $96,x
+le393:	dex
+le394:	bpl le38b
+le396:	jsr $ebca
+le399:	ldx #$99
+le39b:	ldy #$96
+le39d:	jsr $ffd8
+le3a0:	jmp $e08b
+le3a3:	ldx #$ff
+le3a5:	stx $66
+le3a7:	stx $67
+le3a9:	lda #$00
+le3ab:	sta $a0
+le3ad:	jsr $ebca
+le3b0:	lda $93
+le3b2:	cmp #$56
+le3b4:	beq le3bd
+le3b6:	cmp #$4c
+le3b8:	bne le35c
+le3ba:	lda #$00
+le3bc:	bit $80a9
+le3bf:	ldx $66
+le3c1:	ldy $67
+le3c3:	ora $68
+le3c5:	jsr $ffd5
+le3c8:	jmp $ebed
+le3cb:	!byte $ff
+le3cc:	!byte $ff
+le3cd:	!byte $ff
+le3ce:	!byte $ff
+le3cf:	!byte $ff
+le3d0:	!byte $ff
+le3d1:	!byte $ff
+le3d2:	!byte $ff
+le3d3:	!byte $ff
+le3d4:	!byte $ff
+le3d5:	!byte $ff
+le3d6:	!byte $ff
+le3d7:	!byte $ff
+le3d8:	!byte $ff
+le3d9:	!byte $ff
+le3da:	!byte $ff
+le3db:	jsr $e983
+le3de:	bcs le403
+le3e0:	lda $68
+le3e2:	cmp $03b9
+le3e5:	bne le403
+le3e7:	jsr $e7a7
+le3ea:	bcs le403
+le3ec:	ldy #$00
+le3ee:	lda $60
+le3f0:	jsr $e122
+le3f3:	jsr $ffe1
+le3f6:	beq le400
+le3f8:	jsr $e950
+le3fb:	jsr $e93c
+le3fe:	bcs le3ee
+le400:	jmp $e08b
+le403:	jmp $e0bc
+le406:	bcs le442
+le408:	jsr $e901
+le40b:	ldx #$00
+le40d:	stx $03a1
+le410:	stx $03b4
+le413:	jsr $e8e9
+le416:	bne le41f
+le418:	cpx #$00
+le41a:	bne le41f
+le41c:	jmp $e08b
+le41f:	cmp #$20
+le421:	beq le40b
+le423:	sta $03ac,x
+le426:	inx
+le427:	cpx #$03
+le429:	bne le413
+le42b:	dex
+le42c:	bmi le445
+le42e:	lda $03ac,x
+le431:	sec
+le432:	sbc #$3f
+le434:	ldy #$05
+le436:	lsr
+le437:	ror $03a1
+le43a:	ror $03a0
+le43d:	dey
+le43e:	bne le436
+le440:	beq le42b
+le442:	jmp $e0bc
+le445:	ldx #$02
+le447:	lda $03b4
+le44a:	bne le47c
+le44c:	jsr $e7ce
+le44f:	beq le47a
+le451:	bcs le442
+le453:	lda #$24
+le455:	sta $03a0,x
+le458:	inx
+le459:	lda $62
+le45b:	bne le442
+le45d:	ldy #$04
+le45f:	lda $03b6
+le462:	cmp #$08
+le464:	bcc le46b
+le466:	cpy $03b4
+le469:	beq le471
+le46b:	lda $61
+le46d:	bne le471
+le46f:	ldy #$02
+le471:	lda #$30
+le473:	sta $03a0,x
+le476:	inx
+le477:	dey
+le478:	bne le473
+le47a:	dec $7a
+le47c:	jsr $e8e9
+le47f:	beq le48f
+le481:	cmp #$20
+le483:	beq le447
+le485:	sta $03a0,x
+le488:	inx
+le489:	cpx #$0a
+le48b:	bcc le447
+le48d:	bcs le442
+le48f:	stx $63
+le491:	ldx #$00
+le493:	stx $03b1
+le496:	ldx #$00
+le498:	stx $9f
+le49a:	lda $03b1
+le49d:	jsr $e659
+le4a0:	ldx $03aa
+le4a3:	stx $64
+le4a5:	tax
+le4a6:	lda $e761,x
+le4a9:	jsr $e57f
+le4ac:	lda $e721,x
+le4af:	jsr $e57f
+le4b2:	ldx #$06
+le4b4:	cpx #$03
+le4b6:	bne le4cc
+le4b8:	ldy $03ab
+le4bb:	beq le4cc
+le4bd:	lda $03aa
+le4c0:	cmp #$e8
+le4c2:	lda #$30
+le4c4:	bcs le4e4
+le4c6:	jsr $e57c
+le4c9:	dey
+le4ca:	bne le4bd
+le4cc:	asl $03aa
+le4cf:	bcc le4df
+le4d1:	lda $e714,x
+le4d4:	jsr $e57f
+le4d7:	lda $e71a,x
+le4da:	beq le4df
+le4dc:	jsr $e57f
+le4df:	dex
+le4e0:	bne le4b4
+le4e2:	beq le4ea
+le4e4:	jsr $e57c
+le4e7:	jsr $e57c
+le4ea:	lda $63
+le4ec:	cmp $9f
+le4ee:	beq le4f3
+le4f0:	jmp $e58b
+le4f3:	ldy $03ab
+le4f6:	beq le52a
+le4f8:	lda $64
+le4fa:	cmp #$9d
+le4fc:	bne le521
+le4fe:	lda $60
+le500:	sbc $66
+le502:	tax
+le503:	lda $61
+le505:	sbc $67
+le507:	bcc le511
+le509:	bne le579
+le50b:	cpx #$82
+le50d:	bcs le579
+le50f:	bcc le519
+le511:	tay
+le512:	iny
+le513:	bne le579
+le515:	cpx #$82
+le517:	bcc le579
+le519:	dex
+le51a:	dex
+le51b:	txa
+le51c:	ldy $03ab
+le51f:	bne le524
+le521:	lda $005f,y
+le524:	jsr $e122
+le527:	dey
+le528:	bne le521
+le52a:	lda $03b1
+le52d:	jsr $e122
+le530:	jsr $e8ad
+le533:	jsr $ff3f
+le536:	eor ($20,x)
+le538:	!byte $1b
+le539:	eor ($00),y
+le53b:	jsr $e5dc
+le53e:	inc $03ab
+le541:	lda $03ab
+le544:	jsr $e952
+le547:	lda #$41
+le549:	sta $034a
+le54c:	lda #$20
+le54e:	sta $034b
+le551:	sta $0351
+le554:	lda $68
+le556:	jsr $e8d2
+le559:	stx $034c
+le55c:	lda $67
+le55e:	jsr $e8d2
+le561:	sta $034d
+le564:	stx $034e
+le567:	lda $66
+le569:	jsr $e8d2
+le56c:	sta $034f
+le56f:	stx $0350
+le572:	jsr $eb87
+le575:	nop
+le576:	jmp $e08b
+le579:	jmp $e0bc
+le57c:	jsr $e57f
+le57f:	stx $03af
+le582:	ldx $9f
+le584:	cmp $03a0,x
+le587:	beq le593
+le589:	pla
+le58a:	pla
+le58b:	inc $03b1
+le58e:	beq le579
+le590:	jmp $e496
+le593:	inc $9f
+le595:	ldx $03af
+le598:	rts
+le599:	bcs le5a3
+le59b:	jsr $e901
+le59e:	jsr $e7a7
+le5a1:	bcc le5a9
+le5a3:	lda #$14
+le5a5:	sta $60
+le5a7:	bne le5ae
+le5a9:	jsr $e90e
+le5ac:	bcc le5d1
+le5ae:	jsr $ff3f
+le5b1:	ora $511b
+le5b4:	brk
+le5b5:	jsr $ffe1
+le5b8:	beq le5ce
+le5ba:	jsr $e5d4
+le5bd:	inc $03ab
+le5c0:	lda $03ab
+le5c3:	jsr $e952
+le5c6:	lda $03ab
+le5c9:	jsr $e924
+le5cc:	bcs le5ae
+le5ce:	jmp $e08b
+le5d1:	jmp $e0bc
+le5d4:	lda #$2e
+le5d6:	jsr $ffd2
+le5d9:	jsr $e8a8
+le5dc:	jsr $e892
+le5df:	jsr $e8a8
+le5e2:	ldy #$00
+le5e4:	jsr $e11a
+le5e7:	jsr $e659
+le5ea:	pha
+le5eb:	ldx $03ab
+le5ee:	inx
+le5ef:	dex
+le5f0:	bpl le5fc
+le5f2:	jsr $ff3f
+le5f5:	jsr $2020
+le5f8:	brk
+le5f9:	jmp $e602
+le5fc:	jsr $e11a
+le5ff:	jsr $e8a5
+le602:	iny
+le603:	cpy #$03
+le605:	bcc le5ef
+le607:	pla
+le608:	ldx #$03
+le60a:	jsr $e6a1
+le60d:	ldx #$06
+le60f:	cpx #$03
+le611:	bne le62a
+le613:	ldy $03ab
+le616:	beq le62a
+le618:	lda $03aa
+le61b:	cmp #$e8
+le61d:	php
+le61e:	jsr $e11a
+le621:	plp
+le622:	bcs le641
+le624:	jsr $e8c2
+le627:	dey
+le628:	bne le618
+le62a:	asl $03aa
+le62d:	bcc le63d
+le62f:	lda $e714,x
+le632:	jsr $ffd2
+le635:	lda $e71a,x
+le638:	beq le63d
+le63a:	jsr $ffd2
+le63d:	dex
+le63e:	bne le60f
+le640:	rts
+le641:	jsr $e64d
+le644:	clc
+le645:	adc #$01
+le647:	bne le64a
+le649:	inx
+le64a:	jmp $e89f
+le64d:	ldx $67
+le64f:	tay
+le650:	bpl le653
+le652:	dex
+le653:	adc $66
+le655:	bcc le658
+le657:	inx
+le658:	rts
+le659:	tay
+le65a:	lsr
+le65b:	bcc le668
+le65d:	lsr
+le65e:	bcs le677
+le660:	cmp #$22
+le662:	beq le677
+le664:	and #$07
+le666:	ora #$80
+le668:	lsr
+le669:	tax
+le66a:	lda $e6c3,x
+le66d:	bcs le673
+le66f:	lsr
+le670:	lsr
+le671:	lsr
+le672:	lsr
+le673:	and #$0f
+le675:	bne le67b
+le677:	ldy #$80
+le679:	lda #$00
+le67b:	tax
+le67c:	lda $e707,x
+le67f:	sta $03aa
+le682:	and #$03
+le684:	sta $03ab
+le687:	tya
+le688:	and #$8f
+le68a:	tax
+le68b:	tya
+le68c:	ldy #$03
+le68e:	cpx #$8a
+le690:	beq le69d
+le692:	lsr
+le693:	bcc le69d
+le695:	lsr
+le696:	lsr
+le697:	ora #$20
+le699:	dey
+le69a:	bne le696
+le69c:	iny
+le69d:	dey
+le69e:	bne le692
+le6a0:	rts
+le6a1:	tay
+le6a2:	lda $e721,y
+le6a5:	sta $63
+le6a7:	lda $e761,y
+le6aa:	sta $64
+le6ac:	lda #$00
+le6ae:	ldy #$05
+le6b0:	asl $64
+le6b2:	rol $63
+le6b4:	rol
+le6b5:	dey
+le6b6:	bne le6b0
+le6b8:	adc #$3f
+le6ba:	jsr $ffd2
+le6bd:	dex
+le6be:	bne le6ac
+le6c0:	jmp $e8a8
+le6c3:	rti
+le6c4:	!byte $02
+le6c5:	eor $03
+le6c7:	bne le6d1
+le6c9:	rti
+le6ca:	ora #$30
+le6cc:	!byte $22
+le6cd:	eor $33
+le6cf:	bne le6d9
+le6d1:	rti
+le6d2:	ora #$40
+le6d4:	!byte $02
+le6d5:	eor $33
+le6d7:	bne le6e1
+le6d9:	rti
+le6da:	ora #$40
+le6dc:	!byte $02
+le6dd:	eor $b3
+le6df:	bne le6e9
+le6e1:	rti
+le6e2:	ora #$00
+le6e4:	!byte $22
+le6e5:	!byte $44
+le6e6:	!byte $33
+le6e7:	bne le675
+le6e9:	!byte $44
+le6ea:	brk
+le6eb:	ora ($22),y
+le6ed:	!byte $44
+le6ee:	!byte $33
+le6ef:	bne le67d
+le6f1:	!byte $44
+le6f2:	txs
+le6f3:	bpl le717
+le6f5:	!byte $44
+le6f6:	!byte $33
+le6f7:	bne le701
+le6f9:	rti
+le6fa:	ora #$10
+le6fc:	!byte $22
+le6fd:	!byte $44
+le6fe:	!byte $33
+le6ff:	bne le709
+le701:	rti
+le702:	ora #$62
+le704:	!byte $13
+le705:	sei
+le706:	lda #$00
+le708:	and ($81,x)
+le70a:	!byte $82
+le70b:	brk
+le70c:	brk
+le70d:	eor $914d,y
+le710:	!byte $92
+le711:	stx $4a
+le713:	sta $9d
+le715:	bit $2c29
+le718:	!byte $23
+le719:	plp
+le71a:	bit $59
+le71c:	brk
+le71d:	cli
+le71e:	bit $24
+le720:	brk
+le721:	!byte $1c
+le722:	txa
+le723:	!byte $1c
+le724:	!byte $23
+le725:	eor $1b8b,x
+le728:	lda ($9d,x)
+le72a:	txa
+le72b:	ora $9d23,x
+le72e:	!byte $8b
+le72f:	ora $00a1,x
+le732:	and #$19
+le734:	ldx $a869
+le737:	ora $2423,y
+le73a:	!byte $53
+le73b:	!byte $1b
+le73c:	!byte $23
+le73d:	bit $53
+le73f:	ora $00a1,y
+le742:	!byte $1a
+le743:	!byte $5b
+le744:	!byte $5b
+le745:	lda $69
+le747:	bit $24
+le749:	ldx $a8ae
+le74c:	lda $0029
+le74f:	!byte $7c
+le750:	brk
+le751:	ora $9c,x
+le753:	adc $a59c
+le756:	adc #$29
+le758:	!byte $53
+le759:	sty $13
+le75b:	!byte $34
+le75c:	ora ($a5),y
+le75e:	adc #$23
+le760:	ldy #$d8
+le762:	!byte $62
+le763:	!byte $5a
+le764:	pha
+le765:	rol $62
+le767:	sty $88,x
+le769:	!byte $54
+le76a:	!byte $44
+le76b:	iny
+le76c:	!byte $54
+le76d:	pla
+le76e:	!byte $44
+le76f:	inx
+le770:	sty $00,x
+le772:	ldy $08,x
+le774:	sty $74
+le776:	ldy $28,x
+le778:	ror $f474
+le77b:	cpy $724a
+le77e:	!byte $f2
+le77f:	ldy $8a
+le781:	brk
+le782:	tax
+le783:	ldx #$a2
+le785:	!byte $74
+le786:	!byte $74
+le787:	!byte $74
+le788:	!byte $72
+le789:	!byte $44
+le78a:	pla
+le78b:	!byte $b2
+le78c:	!byte $32
+le78d:	!byte $b2
+le78e:	brk
+le78f:	!byte $22
+le790:	brk
+le791:	!byte $1a
+le792:	!byte $1a
+le793:	rol $26
+le795:	!byte $72
+le796:	!byte $72
+le797:	dey
+le798:	iny
+le799:	cpy $ca
+le79b:	rol $48
+le79d:	!byte $44
+le79e:	!byte $44
+le79f:	ldx #$c8
+le7a1:	ora $2020
+le7a4:	jsr $7ac6
+le7a7:	jsr $e7ce
+le7aa:	bcs le7c2
+le7ac:	jsr $e8e7
+le7af:	bne le7ba
+le7b1:	dec $7a
+le7b3:	lda $03b4
+le7b6:	bne le7c9
+le7b8:	beq le7c7
+le7ba:	cmp #$20
+le7bc:	beq le7c9
+le7be:	cmp #$2c
+le7c0:	beq le7c9
+le7c2:	pla
+le7c3:	pla
+le7c4:	jmp $e0bc
+le7c7:	sec
+le7c8:	bit $18
+le7ca:	lda $03b4
+le7cd:	rts
+le7ce:	lda #$00
+le7d0:	sta $60
+le7d2:	sta $61
+le7d4:	sta $62
+le7d6:	sta $03b4
+le7d9:	txa
+le7da:	pha
+le7db:	tya
+le7dc:	pha
+le7dd:	jsr $e8e9
+le7e0:	bne le7e5
+le7e2:	jmp $e87e
+le7e5:	cmp #$20
+le7e7:	beq le7dd
+le7e9:	ldx #$03
+le7eb:	cmp $e0f5,x
+le7ee:	beq le7f6
+le7f0:	dex
+le7f1:	bpl le7eb
+le7f3:	inx
+le7f4:	dec $7a
+le7f6:	ldy $e88a,x
+le7f9:	lda $e88e,x
+le7fc:	sta $03b6
+le7ff:	jsr $e8e9
+le802:	beq le87e
+le804:	sec
+le805:	sbc #$30
+le807:	bcc le87e
+le809:	cmp #$0a
+le80b:	bcc le813
+le80d:	sbc #$07
+le80f:	cmp #$10
+le811:	bcs le87e
+le813:	sta $03b5
+le816:	cpy $03b5
+le819:	bcc le87c
+le81b:	beq le87c
+le81d:	inc $03b4
+le820:	cpy #$0a
+le822:	bne le82e
+le824:	ldx #$02
+le826:	lda $60,x
+le828:	sta $03b7,x
+le82b:	dex
+le82c:	bpl le826
+le82e:	ldx $03b6
+le831:	asl $60
+le833:	rol $61
+le835:	rol $62
+le837:	bcs le87c
+le839:	dex
+le83a:	bne le831
+le83c:	cpy #$0a
+le83e:	bne le862
+le840:	asl $03b7
+le843:	rol $03b8
+le846:	rol $03b9
+le849:	bcs le87c
+le84b:	lda $03b7
+le84e:	adc $60
+le850:	sta $60
+le852:	lda $03b8
+le855:	adc $61
+le857:	sta $61
+le859:	lda $03b9
+le85c:	adc $62
+le85e:	sta $62
+le860:	bcs le87c
+le862:	clc
+le863:	lda $03b5
+le866:	adc $60
+le868:	sta $60
+le86a:	txa
+le86b:	adc $61
+le86d:	sta $61
+le86f:	txa
+le870:	adc $62
+le872:	sta $62
+le874:	bcs le87c
+le876:	and #$f0
+le878:	bne le87c
+le87a:	beq le7ff
+le87c:	sec
+le87d:	bit $18
+le87f:	sty $03b6
+le882:	pla
+le883:	tay
+le884:	pla
+le885:	tax
+le886:	lda $03b4
+le889:	rts
+le88a:	bpl le896
+le88c:	php
+le88d:	!byte $02
+le88e:	!byte $04
+le88f:	!byte $03
+le890:	!byte $03
+le891:	ora ($a5,x)
+le893:	pla
+le894:	jsr $e8d2
+le897:	txa
+le898:	jsr $ffd2
+le89b:	lda $66
+le89d:	ldx $67
+le89f:	pha
+le8a0:	txa
+le8a1:	jsr $e8c2
+le8a4:	pla
+le8a5:	jsr $e8c2
+le8a8:	lda #$20
+le8aa:	jmp $ffd2
+le8ad:	jsr $ff3f
+le8b0:	ora $0091
+le8b3:	rts
+le8b4:	lda #$0d
+le8b6:	jmp $ffd2
+le8b9:	jsr $ff3f
+le8bc:	ora $511b
+le8bf:	jsr $6000
+le8c2:	stx $03af
+le8c5:	jsr $e8d2
+le8c8:	jsr $ffd2
+le8cb:	txa
+le8cc:	ldx $03af
+le8cf:	jmp $ffd2
+le8d2:	pha
+le8d3:	jsr $e8dc
+le8d6:	tax
+le8d7:	pla
+le8d8:	lsr
+le8d9:	lsr
+le8da:	lsr
+le8db:	lsr
+le8dc:	and #$0f
+le8de:	cmp #$0a
+le8e0:	bcc le8e4
+le8e2:	adc #$06
+le8e4:	adc #$30
+le8e6:	rts
+le8e7:	dec $7a
+le8e9:	stx $03af
+le8ec:	ldx $7a
+le8ee:	lda $0200,x
+le8f1:	beq le8f9
+le8f3:	cmp #$3a
+le8f5:	beq le8f9
+le8f7:	cmp #$3f
+le8f9:	php
+le8fa:	inc $7a
+le8fc:	ldx $03af
+le8ff:	plp
+le900:	rts
+le901:	lda $60
+le903:	sta $66
+le905:	lda $61
+le907:	sta $67
+le909:	lda $62
+le90b:	sta $68
+le90d:	rts
+le90e:	sec
+le90f:	lda $60
+le911:	sbc $66
+le913:	sta $60
+le915:	lda $61
+le917:	sbc $67
+le919:	sta $61
+le91b:	lda $62
+le91d:	sbc $68
+le91f:	sta $62
+le921:	rts
+le922:	lda #$01
+le924:	sta $03af
+le927:	sec
+le928:	lda $60
+le92a:	sbc $03af
+le92d:	sta $60
+le92f:	lda $61
+le931:	sbc #$00
+le933:	sta $61
+le935:	lda $62
+le937:	sbc #$00
+le939:	sta $62
+le93b:	rts
+le93c:	sec
+le93d:	lda $63
+le93f:	sbc #$01
+le941:	sta $63
+le943:	lda $64
+le945:	sbc #$00
+le947:	sta $64
+le949:	lda $65
+le94b:	sbc #$00
+le94d:	sta $65
+le94f:	rts
+le950:	lda #$01
+le952:	clc
+le953:	adc $66
+le955:	sta $66
+le957:	bcc le95f
+le959:	inc $67
+le95b:	bne le95f
+le95d:	inc $68
+le95f:	rts
+le960:	sec
+le961:	lda $66
+le963:	sbc #$01
+le965:	sta $66
+le967:	lda $67
+le969:	sbc #$00
+le96b:	sta $67
+le96d:	lda $68
+le96f:	sbc #$00
+le971:	sta $68
+le973:	rts
+le974:	bcs le982
+le976:	lda $60
+le978:	ldy $61
+le97a:	ldx $62
+le97c:	sta $04
+le97e:	sty $03
+le980:	stx $02
+le982:	rts
+le983:	bcs le9af
+le985:	jsr $e901
+le988:	jsr $e7a7
+le98b:	bcs le9af
+le98d:	lda $60
+le98f:	sta $03b7
+le992:	lda $61
+le994:	sta $03b8
+le997:	lda $62
+le999:	sta $03b9
+le99c:	jsr $e90e
+le99f:	lda $60
+le9a1:	sta $63
+le9a3:	lda $61
+le9a5:	sta $64
+le9a7:	lda $62
+le9a9:	sta $65
+le9ab:	bcc le9af
+le9ad:	clc
+le9ae:	bit $38
+le9b0:	rts
+le9b1:	jsr $e7a5
+le9b4:	jsr $e8b9
+le9b7:	lda #$24
+le9b9:	jsr $ffd2
+le9bc:	lda $62
+le9be:	beq le9c7
+le9c0:	jsr $e8d2
+le9c3:	txa
+le9c4:	jsr $ffd2
+le9c7:	lda $60
+le9c9:	ldx $61
+le9cb:	jsr $e89f
+le9ce:	jsr $e8b9
+le9d1:	lda #$2b
+le9d3:	jsr $ffd2
+le9d6:	jsr $ea07
+le9d9:	lda #$00
+le9db:	ldx #$08
+le9dd:	ldy #$03
+le9df:	jsr $ea5d
+le9e2:	jsr $e8b9
+le9e5:	lda #$26
+le9e7:	jsr $ffd2
+le9ea:	lda #$00
+le9ec:	ldx #$08
+le9ee:	ldy #$02
+le9f0:	jsr $ea47
+le9f3:	jsr $e8b9
+le9f6:	lda #$25
+le9f8:	jsr $ffd2
+le9fb:	lda #$00
+le9fd:	ldx #$18
+le9ff:	ldy #$00
+lea01:	jsr $ea47
+lea04:	jmp $e08b
+lea07:	jsr $e901
+lea0a:	lda #$00
+lea0c:	ldx #$07
+lea0e:	sta $03a0,x
+lea11:	dex
+lea12:	bpl lea0e
+lea14:	inc $03a7
+lea17:	ldy #$17
+lea19:	php
+lea1a:	sei
+lea1b:	sed
+lea1c:	lsr $68
+lea1e:	ror $67
+lea20:	ror $66
+lea22:	bcc lea33
+lea24:	clc
+lea25:	ldx #$03
+lea27:	lda $03a4,x
+lea2a:	adc $03a0,x
+lea2d:	sta $03a0,x
+lea30:	dex
+lea31:	bpl lea27
+lea33:	clc
+lea34:	ldx #$03
+lea36:	lda $03a4,x
+lea39:	adc $03a4,x
+lea3c:	sta $03a4,x
+lea3f:	dex
+lea40:	bpl lea36
+lea42:	dey
+lea43:	bpl lea1c
+lea45:	plp
+lea46:	rts
+lea47:	pha
+lea48:	lda $60
+lea4a:	sta $03a2
+lea4d:	lda $61
+lea4f:	sta $03a1
+lea52:	lda $62
+lea54:	sta $03a0
+lea57:	lda #$00
+lea59:	sta $03a3
+lea5c:	pla
+lea5d:	sta $03b4
+lea60:	sty $03b6
+lea63:	ldy $03b6
+lea66:	lda #$00
+lea68:	asl $03a3
+lea6b:	rol $03a2
+lea6e:	rol $03a1
+lea71:	rol $03a0
+lea74:	rol
+lea75:	dey
+lea76:	bpl lea68
+lea78:	tay
+lea79:	bne lea84
+lea7b:	cpx #$01
+lea7d:	beq lea84
+lea7f:	ldy $03b4
+lea82:	beq lea8c
+lea84:	inc $03b4
+lea87:	ora #$30
+lea89:	jsr $ffd2
+lea8c:	dex
+lea8d:	bne lea63
+lea8f:	rts
+lea90:	bne lea95
+lea92:	ldx #$08
+lea94:	bit $60a6
+lea97:	cpx #$04
+lea99:	bcc leb00
+lea9b:	cpx #$1f
+lea9d:	bcs leb00
+lea9f:	stx $60
+leaa1:	lda #$00
+leaa3:	sta $62
+leaa5:	sta $b7
+leaa7:	tax
+leaa8:	jsr $ff68
+leaab:	jsr $e8e9
+leaae:	dec $7a
+leab0:	cmp #$24
+leab2:	beq leb03
+leab4:	lda #$00
+leab6:	ldx $60
+leab8:	ldy #$0f
+leaba:	jsr $ffba
+leabd:	jsr $ffc0
+leac0:	bcs leaf4
+leac2:	ldx #$00
+leac4:	jsr $ffc9
+leac7:	bcs leaf4
+leac9:	ldx $7a
+leacb:	inc $7a
+leacd:	lda $0200,x
+lead0:	beq lead7
+lead2:	jsr $ffd2
+lead5:	bcc leac9
+lead7:	jsr $ffcc
+leada:	jsr $e8b4
+leadd:	ldx #$00
+leadf:	jsr $ffc6
+leae2:	bcs leaf4
+leae4:	jsr $ffcf
+leae7:	jsr $ffd2
+leaea:	cmp #$0d
+leaec:	beq leaf4
+leaee:	lda $90
+leaf0:	and #$bf
+leaf2:	beq leae4
+leaf4:	jsr $ffcc
+leaf7:	lda #$00
+leaf9:	sec
+leafa:	jsr $ffc3
+leafd:	jmp $e08b
+leb00:	jmp $e0bc
+leb03:	ldy #$ff
+leb05:	ldx $7a
+leb07:	dex
+leb08:	iny
+leb09:	inx
+leb0a:	lda $0200,x
+leb0d:	bne leb08
+leb0f:	tya
+leb10:	ldx $7a
+leb12:	ldy #$02
+leb14:	jsr $ffbd
+leb17:	lda #$00
+leb19:	ldx $60
+leb1b:	ldy #$60
+leb1d:	jsr $ffba
+leb20:	jsr $ffc0
+leb23:	bcs leaf4
+leb25:	ldx #$00
+leb27:	jsr $ffc6
+leb2a:	jsr $e8b4
+leb2d:	ldy #$03
+leb2f:	sty $63
+leb31:	jsr $ffcf
+leb34:	sta $60
+leb36:	lda $90
+leb38:	bne leaf4
+leb3a:	jsr $ffcf
+leb3d:	sta $61
+leb3f:	lda $90
+leb41:	bne leaf4
+leb43:	dec $63
+leb45:	bne leb31
+leb47:	jsr $ea07
+leb4a:	lda #$00
+leb4c:	ldx #$08
+leb4e:	ldy #$03
+leb50:	jsr $ea5d
+leb53:	lda #$20
+leb55:	jsr $ffd2
+leb58:	jsr $ffcf
+leb5b:	beq leb66
+leb5d:	ldx $90
+leb5f:	bne leaf4
+leb61:	jsr $ffd2
+leb64:	bcc leb58
+leb66:	jsr $e8b4
+leb69:	jsr $ffe1
+leb6c:	beq leaf4
+leb6e:	ldy #$02
+leb70:	bne leb2f
+leb72:	lda $fffe
+leb75:	cmp #$00
+leb77:	bne leb7c
+leb79:	lda #$ff
+leb7b:	bit $00a9
+leb7e:	sta $d7
+leb80:	jsr $ff3f
+leb83:	!byte $1b
+leb84:	pha
+leb85:	brk
+leb86:	rts
+leb87:	lda #$ab
+leb89:	sta $5d
+leb8b:	lda #$03
+leb8d:	sta $5e
+leb8f:	ldx $01
+leb91:	lda #$0f
+leb93:	sta $01
+leb95:	ldy #$07
+leb97:	lda $034a,y
+leb9a:	sta ($5d),y
+leb9c:	dey
+leb9d:	bpl leb97
+leb9f:	lda #$d1
+leba1:	sta $5d
+leba3:	ldy #$00
+leba5:	sty $5e
+leba7:	lda #$08
+leba9:	sta ($5d),y
+lebab:	stx $01
+lebad:	rts
+lebae:	ldy #$01
+lebb0:	sty $9f
+lebb2:	sty $a0
+lebb4:	dey
+lebb5:	sty $98
+lebb7:	sty $9b
+lebb9:	sty $9c
+lebbb:	sty $9d
+lebbd:	lda #$80
+lebbf:	sta $90
+lebc1:	lda #$03
+lebc3:	sta $91
+lebc5:	lda $00
+lebc7:	sta $92
+lebc9:	rts
+lebca:	ldx $01
+lebcc:	lda #$0f
+lebce:	sta $01
+lebd0:	lda #$00
+lebd2:	sta $5d
+lebd4:	sta $5e
+lebd6:	ldy #$a0
+lebd8:	lda $0000,y
+lebdb:	sta ($5d),y
+lebdd:	dey
+lebde:	cpy #$95
+lebe0:	bne lebe6
+lebe2:	ldy #$92
+lebe4:	bne lebd8
+lebe6:	cpy #$8f
+lebe8:	bne lebd8
+lebea:	stx $01
+lebec:	rts
+lebed:	jsr $e13b
+lebf0:	and #$10
+lebf2:	bne lebff
+lebf4:	jsr $ff3f
+lebf7:	ora $4b4f
+lebfa:	ora $4c00
+lebfd:	!byte $8b
+lebfe:	cpx #$20
+lec00:	!byte $3f
+lec01:	!byte $ff
+lec02:	jsr $5245
+lec05:	!byte $52
+lec06:	!byte $4f
+lec07:	!byte $52
+lec08:	brk
+lec09:	jmp $e08b
+lec0c:	jsr $e974
+lec0f:	lda $02
+lec11:	cmp $00
+lec13:	beq lec3a
+lec15:	jsr $ec1b
+lec18:	jmp $e08b
+lec1b:	sei
+lec1c:	clc
+lec1d:	lda $04
+lec1f:	adc #$02
+lec21:	tax
+lec22:	lda $03
+lec24:	adc #$00
+lec26:	pha
+lec27:	txa
+lec28:	pha
+lec29:	lda $05
+lec2b:	pha
+lec2c:	lda $02
+lec2e:	sta $01
+lec30:	lda $06
+lec32:	ldx $07
+lec34:	ldy $08
+lec36:	pha
+lec37:	jmp $feb5
+lec3a:	lda #$e0
+lec3c:	pha
+lec3d:	lda #$8a
+lec3f:	pha
+lec40:	lda $03
+lec42:	sta $61
+lec44:	lda $04
+lec46:	sta $60
+lec48:	lda $06
+lec4a:	ldx $07
+lec4c:	ldy $08
+lec4e:	jmp ($0060)
+lec51:	!byte $ff
+lec52:	!byte $ff
+lec53:	!byte $ff
+lec54:	!byte $ff
+lec55:	!byte $ff
+lec56:	!byte $ff
+lec57:	!byte $ff
+lec58:	!byte $ff
+lec59:	!byte $ff
+lec5a:	!byte $ff
+lec5b:	!byte $ff
+lec5c:	!byte $ff
+lec5d:	!byte $ff
+lec5e:	!byte $ff
+lec5f:	!byte $ff
+lec60:	!byte $ff
+lec61:	!byte $ff
+lec62:	!byte $ff
+lec63:	!byte $ff
+lec64:	!byte $ff
+lec65:	!byte $ff
+lec66:	!byte $ff
+lec67:	!byte $ff
+lec68:	!byte $ff
+lec69:	!byte $ff
+lec6a:	!byte $ff
+lec6b:	!byte $ff
+lec6c:	!byte $ff
+lec6d:	!byte $ff
+lec6e:	!byte $ff
+lec6f:	!byte $ff
+lec70:	!byte $ff
+lec71:	!byte $ff
+lec72:	!byte $ff
+lec73:	!byte $ff
+lec74:	!byte $ff
+lec75:	!byte $ff
+lec76:	!byte $ff
+lec77:	!byte $ff
+lec78:	!byte $ff
+lec79:	!byte $ff
+lec7a:	!byte $ff
+lec7b:	!byte $ff
+lec7c:	!byte $ff
+lec7d:	!byte $ff
+lec7e:	!byte $ff
+lec7f:	!byte $ff
+lec80:	!byte $ff
+lec81:	!byte $ff
+lec82:	!byte $ff
+lec83:	!byte $ff
+lec84:	!byte $ff
+lec85:	!byte $ff
+lec86:	!byte $ff
+lec87:	!byte $ff
+lec88:	!byte $ff
+lec89:	!byte $ff
+lec8a:	!byte $ff
+lec8b:	!byte $ff
+lec8c:	!byte $ff
+lec8d:	!byte $ff
+lec8e:	!byte $ff
+lec8f:	!byte $ff
+lec90:	!byte $ff
+lec91:	!byte $ff
+lec92:	!byte $ff
+lec93:	!byte $ff
+lec94:	!byte $ff
+lec95:	!byte $ff
+lec96:	!byte $ff
+lec97:	!byte $ff
+lec98:	!byte $ff
+lec99:	!byte $ff
+lec9a:	!byte $ff
+lec9b:	!byte $ff
+lec9c:	!byte $ff
+lec9d:	!byte $ff
+lec9e:	!byte $ff
+lec9f:	!byte $ff
+leca0:	!byte $ff
+leca1:	!byte $ff
+leca2:	!byte $ff
+leca3:	!byte $ff
+leca4:	!byte $ff
+leca5:	!byte $ff
+leca6:	!byte $ff
+leca7:	!byte $ff
+leca8:	!byte $ff
+leca9:	!byte $ff
+lecaa:	!byte $ff
+lecab:	!byte $ff
+lecac:	!byte $ff
+lecad:	!byte $ff
+lecae:	!byte $ff
+lecaf:	!byte $ff
+lecb0:	!byte $ff
+lecb1:	!byte $ff
+lecb2:	!byte $ff
+lecb3:	!byte $ff
+lecb4:	!byte $ff
+lecb5:	!byte $ff
+lecb6:	!byte $ff
+lecb7:	!byte $ff
+lecb8:	!byte $ff
+lecb9:	!byte $ff
+lecba:	!byte $ff
+lecbb:	!byte $ff
+lecbc:	!byte $ff
+lecbd:	!byte $ff
+lecbe:	!byte $ff
+lecbf:	!byte $ff
+lecc0:	!byte $ff
+lecc1:	!byte $ff
+lecc2:	!byte $ff
+lecc3:	!byte $ff
+lecc4:	!byte $ff
+lecc5:	!byte $ff
+lecc6:	!byte $ff
+lecc7:	!byte $ff
+lecc8:	!byte $ff
+lecc9:	!byte $ff
+lecca:	!byte $ff
+leccb:	!byte $ff
+leccc:	!byte $ff
+leccd:	!byte $ff
+lecce:	!byte $ff
+leccf:	!byte $ff
+lecd0:	!byte $ff
+lecd1:	!byte $ff
+lecd2:	!byte $ff
+lecd3:	!byte $ff
+lecd4:	!byte $ff
+lecd5:	!byte $ff
+lecd6:	!byte $ff
+lecd7:	!byte $ff
+lecd8:	!byte $ff
+lecd9:	!byte $ff
+lecda:	!byte $ff
+lecdb:	!byte $ff
+lecdc:	!byte $ff
+lecdd:	!byte $ff
+lecde:	!byte $ff
+lecdf:	!byte $ff
+lece0:	!byte $ff
+lece1:	!byte $ff
+lece2:	!byte $ff
+lece3:	!byte $ff
+lece4:	!byte $ff
+lece5:	!byte $ff
+lece6:	!byte $ff
+lece7:	!byte $ff
+lece8:	!byte $ff
+lece9:	!byte $ff
+lecea:	!byte $ff
+leceb:	!byte $ff
+lecec:	!byte $ff
+leced:	!byte $ff
+lecee:	!byte $ff
+lecef:	!byte $ff
+lecf0:	!byte $ff
+lecf1:	!byte $ff
+lecf2:	!byte $ff
+lecf3:	!byte $ff
+lecf4:	!byte $ff
+lecf5:	!byte $ff
+lecf6:	!byte $ff
+lecf7:	!byte $ff
+lecf8:	!byte $ff
+lecf9:	!byte $ff
+lecfa:	!byte $ff
+lecfb:	!byte $ff
+lecfc:	!byte $ff
+lecfd:	!byte $ff
+lecfe:	!byte $ff
+lecff:	!byte $ff
+led00:	!byte $ff
+led01:	!byte $ff
+led02:	!byte $ff
+led03:	!byte $ff
+led04:	!byte $ff
+led05:	!byte $ff
+led06:	!byte $ff
+led07:	!byte $ff
+led08:	!byte $ff
+led09:	!byte $ff
+led0a:	!byte $ff
+led0b:	!byte $ff
+led0c:	!byte $ff
+led0d:	!byte $ff
+led0e:	!byte $ff
+led0f:	!byte $ff
+led10:	!byte $ff
+led11:	!byte $ff
+led12:	!byte $ff
+led13:	!byte $ff
+led14:	!byte $ff
+led15:	!byte $ff
+led16:	!byte $ff
+led17:	!byte $ff
+led18:	!byte $ff
+led19:	!byte $ff
+led1a:	!byte $ff
+led1b:	!byte $ff
+led1c:	!byte $ff
+led1d:	!byte $ff
+led1e:	!byte $ff
+led1f:	!byte $ff
+led20:	!byte $ff
+led21:	!byte $ff
+led22:	!byte $ff
+led23:	!byte $ff
+led24:	!byte $ff
+led25:	!byte $ff
+led26:	!byte $ff
+led27:	!byte $ff
+led28:	!byte $ff
+led29:	!byte $ff
+led2a:	!byte $ff
+led2b:	!byte $ff
+led2c:	!byte $ff
+led2d:	!byte $ff
+led2e:	!byte $ff
+led2f:	!byte $ff
+led30:	!byte $ff
+led31:	!byte $ff
+led32:	!byte $ff
+led33:	!byte $ff
+led34:	!byte $ff
+led35:	!byte $ff
+led36:	!byte $ff
+led37:	!byte $ff
+led38:	!byte $ff
+led39:	!byte $ff
+led3a:	!byte $ff
+led3b:	!byte $ff
+led3c:	!byte $ff
+led3d:	!byte $ff
+led3e:	!byte $ff
+led3f:	!byte $ff
+led40:	!byte $ff
+led41:	!byte $ff
+led42:	!byte $ff
+led43:	!byte $ff
+led44:	!byte $ff
+led45:	!byte $ff
+led46:	!byte $ff
+led47:	!byte $ff
+led48:	!byte $ff
+led49:	!byte $ff
+led4a:	!byte $ff
+led4b:	!byte $ff
+led4c:	!byte $ff
+led4d:	!byte $ff
+led4e:	!byte $ff
+led4f:	!byte $ff
+led50:	!byte $ff
+led51:	!byte $ff
+led52:	!byte $ff
+led53:	!byte $ff
+led54:	!byte $ff
+led55:	!byte $ff
+led56:	!byte $ff
+led57:	!byte $ff
+led58:	!byte $ff
+led59:	!byte $ff
+led5a:	!byte $ff
+led5b:	!byte $ff
+led5c:	!byte $ff
+led5d:	!byte $ff
+led5e:	!byte $ff
+led5f:	!byte $ff
+led60:	!byte $ff
+led61:	!byte $ff
+led62:	!byte $ff
+led63:	!byte $ff
+led64:	!byte $ff
+led65:	!byte $ff
+led66:	!byte $ff
+led67:	!byte $ff
+led68:	!byte $ff
+led69:	!byte $ff
+led6a:	!byte $ff
+led6b:	!byte $ff
+led6c:	!byte $ff
+led6d:	!byte $ff
+led6e:	!byte $ff
+led6f:	!byte $ff
+led70:	!byte $ff
+led71:	!byte $ff
+led72:	!byte $ff
+led73:	!byte $ff
+led74:	!byte $ff
+led75:	!byte $ff
+led76:	!byte $ff
+led77:	!byte $ff
+led78:	!byte $ff
+led79:	!byte $ff
+led7a:	!byte $ff
+led7b:	!byte $ff
+led7c:	!byte $ff
+led7d:	!byte $ff
+led7e:	!byte $ff
+led7f:	!byte $ff
+led80:	!byte $ff
+led81:	!byte $ff
+led82:	!byte $ff
+led83:	!byte $ff
+led84:	!byte $ff
+led85:	!byte $ff
+led86:	!byte $ff
+led87:	!byte $ff
+led88:	!byte $ff
+led89:	!byte $ff
+led8a:	!byte $ff
+led8b:	!byte $ff
+led8c:	!byte $ff
+led8d:	!byte $ff
+led8e:	!byte $ff
+led8f:	!byte $ff
+led90:	!byte $ff
+led91:	!byte $ff
+led92:	!byte $ff
+led93:	!byte $ff
+led94:	!byte $ff
+led95:	!byte $ff
+led96:	!byte $ff
+led97:	!byte $ff
+led98:	!byte $ff
+led99:	!byte $ff
+led9a:	!byte $ff
+led9b:	!byte $ff
+led9c:	!byte $ff
+led9d:	!byte $ff
+led9e:	!byte $ff
+led9f:	!byte $ff
+leda0:	!byte $ff
+leda1:	!byte $ff
+leda2:	!byte $ff
+leda3:	!byte $ff
+leda4:	!byte $ff
+leda5:	!byte $ff
+leda6:	!byte $ff
+leda7:	!byte $ff
+leda8:	!byte $ff
+leda9:	!byte $ff
+ledaa:	!byte $ff
+ledab:	!byte $ff
+ledac:	!byte $ff
+ledad:	!byte $ff
+ledae:	!byte $ff
+ledaf:	!byte $ff
+ledb0:	!byte $ff
+ledb1:	!byte $ff
+ledb2:	!byte $ff
+ledb3:	!byte $ff
+ledb4:	!byte $ff
+ledb5:	!byte $ff
+ledb6:	!byte $ff
+ledb7:	!byte $ff
+ledb8:	!byte $ff
+ledb9:	!byte $ff
+ledba:	!byte $ff
+ledbb:	!byte $ff
+ledbc:	!byte $ff
+ledbd:	!byte $ff
+ledbe:	!byte $ff
+ledbf:	!byte $ff
+ledc0:	!byte $ff
+ledc1:	!byte $ff
+ledc2:	!byte $ff
+ledc3:	!byte $ff
+ledc4:	!byte $ff
+ledc5:	!byte $ff
+ledc6:	!byte $ff
+ledc7:	!byte $ff
+ledc8:	!byte $ff
+ledc9:	!byte $ff
+ledca:	!byte $ff
+ledcb:	!byte $ff
+ledcc:	!byte $ff
+ledcd:	!byte $ff
+ledce:	!byte $ff
+ledcf:	!byte $ff
+ledd0:	!byte $ff
+ledd1:	!byte $ff
+ledd2:	!byte $ff
+ledd3:	!byte $ff
+ledd4:	!byte $ff
+ledd5:	!byte $ff
+ledd6:	!byte $ff
+ledd7:	!byte $ff
+ledd8:	!byte $ff
+ledd9:	!byte $ff
+ledda:	!byte $ff
+leddb:	!byte $ff
+leddc:	!byte $ff
+leddd:	!byte $ff
+ledde:	!byte $ff
+leddf:	!byte $ff
+lede0:	!byte $ff
+lede1:	!byte $ff
+lede2:	!byte $ff
+lede3:	!byte $ff
+lede4:	!byte $ff
+lede5:	!byte $ff
+lede6:	!byte $ff
+lede7:	!byte $ff
+lede8:	!byte $ff
+lede9:	!byte $ff
+ledea:	!byte $ff
+ledeb:	!byte $ff
+ledec:	!byte $ff
+leded:	!byte $ff
+ledee:	!byte $ff
+ledef:	!byte $ff
+ledf0:	!byte $ff
+ledf1:	!byte $ff
+ledf2:	!byte $ff
+ledf3:	!byte $ff
+ledf4:	!byte $ff
+ledf5:	!byte $ff
+ledf6:	!byte $ff
+ledf7:	!byte $ff
+ledf8:	!byte $ff
+ledf9:	!byte $ff
+ledfa:	!byte $ff
+ledfb:	!byte $ff
+ledfc:	!byte $ff
+ledfd:	!byte $ff
+ledfe:	!byte $ff
+ledff:	!byte $ff
+lee00:	!byte $ff
+lee01:	!byte $ff
+lee02:	!byte $ff
+lee03:	!byte $ff
+lee04:	!byte $ff
+lee05:	!byte $ff
+lee06:	!byte $ff
+lee07:	!byte $ff
+lee08:	!byte $ff
+lee09:	!byte $ff
+lee0a:	!byte $ff
+lee0b:	!byte $ff
+lee0c:	!byte $ff
+lee0d:	!byte $ff
+lee0e:	!byte $ff
+lee0f:	!byte $ff
+lee10:	!byte $ff
+lee11:	!byte $ff
+lee12:	!byte $ff
+lee13:	!byte $ff
+lee14:	!byte $ff
+lee15:	!byte $ff
+lee16:	!byte $ff
+lee17:	!byte $ff
+lee18:	!byte $ff
+lee19:	!byte $ff
+lee1a:	!byte $ff
+lee1b:	!byte $ff
+lee1c:	!byte $ff
+lee1d:	!byte $ff
+lee1e:	!byte $ff
+lee1f:	!byte $ff
+lee20:	!byte $ff
+lee21:	!byte $ff
+lee22:	!byte $ff
+lee23:	!byte $ff
+lee24:	!byte $ff
+lee25:	!byte $ff
+lee26:	!byte $ff
+lee27:	!byte $ff
+lee28:	!byte $ff
+lee29:	!byte $ff
+lee2a:	!byte $ff
+lee2b:	!byte $ff
+lee2c:	!byte $ff
+lee2d:	!byte $ff
+lee2e:	!byte $ff
+lee2f:	!byte $ff
+lee30:	!byte $ff
+lee31:	!byte $ff
+lee32:	!byte $ff
+lee33:	!byte $ff
+lee34:	!byte $ff
+lee35:	!byte $ff
+lee36:	!byte $ff
+lee37:	!byte $ff
+lee38:	!byte $ff
+lee39:	!byte $ff
+lee3a:	!byte $ff
+lee3b:	!byte $ff
+lee3c:	!byte $ff
+lee3d:	!byte $ff
+lee3e:	!byte $ff
+lee3f:	!byte $ff
+lee40:	!byte $ff
+lee41:	!byte $ff
+lee42:	!byte $ff
+lee43:	!byte $ff
+lee44:	!byte $ff
+lee45:	!byte $ff
+lee46:	!byte $ff
+lee47:	!byte $ff
+lee48:	!byte $ff
+lee49:	!byte $ff
+lee4a:	!byte $ff
+lee4b:	!byte $ff
+lee4c:	!byte $ff
+lee4d:	!byte $ff
+lee4e:	!byte $ff
+lee4f:	!byte $ff
+lee50:	!byte $ff
+lee51:	!byte $ff
+lee52:	!byte $ff
+lee53:	!byte $ff
+lee54:	!byte $ff
+lee55:	!byte $ff
+lee56:	!byte $ff
+lee57:	!byte $ff
+lee58:	!byte $ff
+lee59:	!byte $ff
+lee5a:	!byte $ff
+lee5b:	!byte $ff
+lee5c:	!byte $ff
+lee5d:	!byte $ff
+lee5e:	!byte $ff
+lee5f:	!byte $ff
+lee60:	!byte $ff
+lee61:	!byte $ff
+lee62:	!byte $ff
+lee63:	!byte $ff
+lee64:	!byte $ff
+lee65:	!byte $ff
+lee66:	!byte $ff
+lee67:	!byte $ff
+lee68:	!byte $ff
+lee69:	!byte $ff
+lee6a:	!byte $ff
+lee6b:	!byte $ff
+lee6c:	!byte $ff
+lee6d:	!byte $ff
+lee6e:	!byte $ff
+lee6f:	!byte $ff
+lee70:	!byte $ff
+lee71:	!byte $ff
+lee72:	!byte $ff
+lee73:	!byte $ff
+lee74:	!byte $ff
+lee75:	!byte $ff
+lee76:	!byte $ff
+lee77:	!byte $ff
+lee78:	!byte $ff
+lee79:	!byte $ff
+lee7a:	!byte $ff
+lee7b:	!byte $ff
+lee7c:	!byte $ff
+lee7d:	!byte $ff
+lee7e:	!byte $ff
+lee7f:	!byte $ff
+lee80:	!byte $ff
+lee81:	!byte $ff
+lee82:	!byte $ff
+lee83:	!byte $ff
+lee84:	!byte $ff
+lee85:	!byte $ff
+lee86:	!byte $ff
+lee87:	!byte $ff
+lee88:	!byte $ff
+lee89:	!byte $ff
+lee8a:	!byte $ff
+lee8b:	!byte $ff
+lee8c:	!byte $ff
+lee8d:	!byte $ff
+lee8e:	!byte $ff
+lee8f:	!byte $ff
+lee90:	!byte $ff
+lee91:	!byte $ff
+lee92:	!byte $ff
+lee93:	!byte $ff
+lee94:	!byte $ff
+lee95:	!byte $ff
+lee96:	!byte $ff
+lee97:	!byte $ff
+lee98:	!byte $ff
+lee99:	!byte $ff
+lee9a:	!byte $ff
+lee9b:	!byte $ff
+lee9c:	!byte $ff
+lee9d:	!byte $ff
+lee9e:	!byte $ff
+lee9f:	!byte $ff
+leea0:	!byte $ff
+leea1:	!byte $ff
+leea2:	!byte $ff
+leea3:	!byte $ff
+leea4:	!byte $ff
+leea5:	!byte $ff
+leea6:	!byte $ff
+leea7:	!byte $ff
+leea8:	!byte $ff
+leea9:	!byte $ff
+leeaa:	!byte $ff
+leeab:	!byte $ff
+leeac:	!byte $ff
+leead:	!byte $ff
+leeae:	!byte $ff
+leeaf:	!byte $ff
+leeb0:	!byte $ff
+leeb1:	!byte $ff
+leeb2:	!byte $ff
+leeb3:	!byte $ff
+leeb4:	!byte $ff
+leeb5:	!byte $ff
+leeb6:	!byte $ff
+leeb7:	!byte $ff
+leeb8:	!byte $ff
+leeb9:	!byte $ff
+leeba:	!byte $ff
+leebb:	!byte $ff
+leebc:	!byte $ff
+leebd:	!byte $ff
+leebe:	!byte $ff
+leebf:	!byte $ff
+leec0:	!byte $ff
+leec1:	!byte $ff
+leec2:	!byte $ff
+leec3:	!byte $ff
+leec4:	!byte $ff
+leec5:	!byte $ff
+leec6:	!byte $ff
+leec7:	!byte $ff
+leec8:	!byte $ff
+leec9:	!byte $ff
+leeca:	!byte $ff
+leecb:	!byte $ff
+leecc:	!byte $ff
+leecd:	!byte $ff
+leece:	!byte $ff
+leecf:	!byte $ff
+leed0:	!byte $ff
+leed1:	!byte $ff
+leed2:	!byte $ff
+leed3:	!byte $ff
+leed4:	!byte $ff
+leed5:	!byte $ff
+leed6:	!byte $ff
+leed7:	!byte $ff
+leed8:	!byte $ff
+leed9:	!byte $ff
+leeda:	!byte $ff
+leedb:	!byte $ff
+leedc:	!byte $ff
+leedd:	!byte $ff
+leede:	!byte $ff
+leedf:	!byte $ff
+leee0:	!byte $ff
+leee1:	!byte $ff
+leee2:	!byte $ff
+leee3:	!byte $ff
+leee4:	!byte $ff
+leee5:	!byte $ff
+leee6:	!byte $ff
+leee7:	!byte $ff
+leee8:	!byte $ff
+leee9:	!byte $ff
+leeea:	!byte $ff
+leeeb:	!byte $ff
+leeec:	!byte $ff
+leeed:	!byte $ff
+leeee:	!byte $ff
+leeef:	!byte $ff
+leef0:	!byte $ff
+leef1:	!byte $ff
+leef2:	!byte $ff
+leef3:	!byte $ff
+leef4:	!byte $ff
+leef5:	!byte $ff
+leef6:	!byte $ff
+leef7:	!byte $ff
+leef8:	!byte $ff
+leef9:	!byte $ff
+leefa:	!byte $ff
+leefb:	!byte $ff
+leefc:	!byte $ff
+leefd:	!byte $ff
+leefe:	!byte $ff
+leeff:	!byte $ff
+lef00:	!byte $ff
+lef01:	!byte $ff
+lef02:	!byte $ff
+lef03:	!byte $ff
+lef04:	!byte $ff
+lef05:	!byte $ff
+lef06:	!byte $ff
+lef07:	!byte $ff
+lef08:	!byte $ff
+lef09:	!byte $ff
+lef0a:	!byte $ff
+lef0b:	!byte $ff
+lef0c:	!byte $ff
+lef0d:	!byte $ff
+lef0e:	!byte $ff
+lef0f:	!byte $ff
+lef10:	!byte $ff
+lef11:	!byte $ff
+lef12:	!byte $ff
+lef13:	!byte $ff
+lef14:	!byte $ff
+lef15:	!byte $ff
+lef16:	!byte $ff
+lef17:	!byte $ff
+lef18:	!byte $ff
+lef19:	!byte $ff
+lef1a:	!byte $ff
+lef1b:	!byte $ff
+lef1c:	!byte $ff
+lef1d:	!byte $ff
+lef1e:	!byte $ff
+lef1f:	!byte $ff
+lef20:	!byte $ff
+lef21:	!byte $ff
+lef22:	!byte $ff
+lef23:	!byte $ff
+lef24:	!byte $ff
+lef25:	!byte $ff
+lef26:	!byte $ff
+lef27:	!byte $ff
+lef28:	!byte $ff
+lef29:	!byte $ff
+lef2a:	!byte $ff
+lef2b:	!byte $ff
+lef2c:	!byte $ff
+lef2d:	!byte $ff
+lef2e:	!byte $ff
+lef2f:	!byte $ff
+lef30:	!byte $ff
+lef31:	!byte $ff
+lef32:	!byte $ff
+lef33:	!byte $ff
+lef34:	!byte $ff
+lef35:	!byte $ff
+lef36:	!byte $ff
+lef37:	!byte $ff
+lef38:	!byte $ff
+lef39:	!byte $ff
+lef3a:	!byte $ff
+lef3b:	!byte $ff
+lef3c:	!byte $ff
+lef3d:	!byte $ff
+lef3e:	!byte $ff
+lef3f:	!byte $ff
+lef40:	!byte $ff
+lef41:	!byte $ff
+lef42:	!byte $ff
+lef43:	!byte $ff
+lef44:	!byte $ff
+lef45:	!byte $ff
+lef46:	!byte $ff
+lef47:	!byte $ff
+lef48:	!byte $ff
+lef49:	!byte $ff
+lef4a:	!byte $ff
+lef4b:	!byte $ff
+lef4c:	!byte $ff
+lef4d:	!byte $ff
+lef4e:	!byte $ff
+lef4f:	!byte $ff
+lef50:	!byte $ff
+lef51:	!byte $ff
+lef52:	!byte $ff
+lef53:	!byte $ff
+lef54:	!byte $ff
+lef55:	!byte $ff
+lef56:	!byte $ff
+lef57:	!byte $ff
+lef58:	!byte $ff
+lef59:	!byte $ff
+lef5a:	!byte $ff
+lef5b:	!byte $ff
+lef5c:	!byte $ff
+lef5d:	!byte $ff
+lef5e:	!byte $ff
+lef5f:	!byte $ff
+lef60:	!byte $ff
+lef61:	!byte $ff
+lef62:	!byte $ff
+lef63:	!byte $ff
+lef64:	!byte $ff
+lef65:	!byte $ff
+lef66:	!byte $ff
+lef67:	!byte $ff
+lef68:	!byte $ff
+lef69:	!byte $ff
+lef6a:	!byte $ff
+lef6b:	!byte $ff
+lef6c:	!byte $ff
+lef6d:	!byte $ff
+lef6e:	!byte $ff
+lef6f:	!byte $ff
+lef70:	!byte $ff
+lef71:	!byte $ff
+lef72:	!byte $ff
+lef73:	!byte $ff
+lef74:	!byte $ff
+lef75:	!byte $ff
+lef76:	!byte $ff
+lef77:	!byte $ff
+lef78:	!byte $ff
+lef79:	!byte $ff
+lef7a:	!byte $ff
+lef7b:	!byte $ff
+lef7c:	!byte $ff
+lef7d:	!byte $ff
+lef7e:	!byte $ff
+lef7f:	!byte $ff
+lef80:	!byte $ff
+lef81:	!byte $ff
+lef82:	!byte $ff
+lef83:	!byte $ff
+lef84:	!byte $ff
+lef85:	!byte $ff
+lef86:	!byte $ff
+lef87:	!byte $ff
+lef88:	!byte $ff
+lef89:	!byte $ff
+lef8a:	!byte $ff
+lef8b:	!byte $ff
+lef8c:	!byte $ff
+lef8d:	!byte $ff
+lef8e:	!byte $ff
+lef8f:	!byte $ff
+lef90:	!byte $ff
+lef91:	!byte $ff
+lef92:	!byte $ff
+lef93:	!byte $ff
+lef94:	!byte $ff
+lef95:	!byte $ff
+lef96:	!byte $ff
+lef97:	!byte $ff
+lef98:	!byte $ff
+lef99:	!byte $ff
+lef9a:	!byte $ff
+lef9b:	!byte $ff
+lef9c:	!byte $ff
+lef9d:	!byte $ff
+lef9e:	!byte $ff
+lef9f:	!byte $ff
+lefa0:	!byte $ff
+lefa1:	!byte $ff
+lefa2:	!byte $ff
+lefa3:	!byte $ff
+lefa4:	!byte $ff
+lefa5:	!byte $ff
+lefa6:	!byte $ff
+lefa7:	!byte $ff
+lefa8:	!byte $ff
+lefa9:	!byte $ff
+lefaa:	!byte $ff
+lefab:	!byte $ff
+lefac:	!byte $ff
+lefad:	!byte $ff
+lefae:	!byte $ff
+lefaf:	!byte $ff
+lefb0:	!byte $ff
+lefb1:	!byte $ff
+lefb2:	!byte $ff
+lefb3:	!byte $ff
+lefb4:	!byte $ff
+lefb5:	!byte $ff
+lefb6:	!byte $ff
+lefb7:	!byte $ff
+lefb8:	!byte $ff
+lefb9:	!byte $ff
+lefba:	!byte $ff
+lefbb:	!byte $ff
+lefbc:	!byte $ff
+lefbd:	!byte $ff
+lefbe:	!byte $ff
+lefbf:	!byte $ff
+lefc0:	!byte $ff
+lefc1:	!byte $ff
+lefc2:	!byte $ff
+lefc3:	!byte $ff
+lefc4:	!byte $ff
+lefc5:	!byte $ff
+lefc6:	!byte $ff
+lefc7:	!byte $ff
+lefc8:	!byte $ff
+lefc9:	!byte $ff
+lefca:	!byte $ff
+lefcb:	!byte $ff
+lefcc:	!byte $ff
+lefcd:	!byte $ff
+lefce:	!byte $ff
+lefcf:	!byte $ff
+lefd0:	!byte $ff
+lefd1:	!byte $ff
+lefd2:	!byte $ff
+lefd3:	!byte $ff
+lefd4:	!byte $ff
+lefd5:	!byte $ff
+lefd6:	!byte $ff
+lefd7:	!byte $ff
+lefd8:	!byte $ff
+lefd9:	!byte $ff
+lefda:	!byte $ff
+lefdb:	!byte $ff
+lefdc:	!byte $ff
+lefdd:	!byte $ff
+lefde:	!byte $ff
+lefdf:	!byte $ff
+lefe0:	!byte $ff
+lefe1:	!byte $ff
+lefe2:	!byte $ff
+lefe3:	!byte $ff
+lefe4:	!byte $ff
+lefe5:	!byte $ff
+lefe6:	!byte $ff
+lefe7:	!byte $ff
+lefe8:	!byte $ff
+lefe9:	!byte $ff
+lefea:	!byte $ff
+lefeb:	!byte $ff
+lefec:	!byte $ff
+lefed:	!byte $ff
+lefee:	!byte $ff
+lefef:	!byte $ff
+leff0:	!byte $ff
+leff1:	!byte $ff
+leff2:	!byte $ff
+leff3:	!byte $ff
+leff4:	!byte $ff
+leff5:	!byte $ff
+leff6:	!byte $ff
+leff7:	!byte $ff
+leff8:	!byte $ff
+leff9:	!byte $ff
+leffa:	!byte $ff
+leffb:	!byte $ff
+leffc:	!byte $ff
+leffd:	!byte $ff
+leffe:	!byte $ff
+lefff:	!byte $ff
