@@ -1,11 +1,18 @@
 ; cbm 600/700 Monitor by David Viner
 ; KERNAL.PRG
 ; comments+labels vossi 05/2020
+; P500 patches vossi 05/2020
 !cpu 6502
 !ct pet
-!to "kernal.prg", cbm
-!initmem $00
+; switches
+P500	= 1
 
+!ifdef P500{
+	!to "kernal500.prg", cbm
+} else{
+	!to "kernal.prg", cbm
+}
+!initmem $00
 ; constants
 
 ; Equates
@@ -38,13 +45,15 @@ air	= $7		; Active interrupt register
 
 bsout	= $ffd2
  
-;udtime	= $f979		; update system time
-udtime	= $f980		; update system time
-
+!ifdef P500{
+udtime	= $f980		; update system time P500
+nmi	= $fb3d		; nmi P500
+start	= $f99e 	; reset P500
+} else{
+udtime	= $f979		; update system time
 nmi	= $fb31		; nmi
 start	= $f997 	; reset
-;nmi	= $fb3d		; nmi P500
-;start	= $f99e 	; reset P500
+}
 ; -------------------------------------------------------------------------------------------------
 *= $fe00
 ; $fe00 interrupt handler

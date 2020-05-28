@@ -1,14 +1,19 @@
 ; cbm 600/700 Monitor by David Viner (converted from c128)
 ; MONITOR.PRG
 ; comments+labels vossi 05/2020
+; P500 patches vossi 05/2020
 !cpu 6502
 !ct pet
 ; switches
-;P500	= 1
+P500	= 1
 
-!to "monitor.prg", cbm
-!initmem $ff
-
+!ifdef P500{
+	!to "monitor500.prg", cbm
+	!initmem $00
+} else{
+	!to "monitor.prg", cbm
+	!initmem $ff
+}
 ; constants
 cr	= $0d
 esc	= $1b
@@ -108,9 +113,11 @@ mbreak:	jmp break	;'brk' entry
 break:  		;////// entry for 'brk'
 	jsr primm
 	!pet cr, "break", 7, 0
+!ifndef P500{
 	nop
 	nop
 	nop
+}
 	ldx #5
 -	pla		;pull pc, registers & status off stack...
 	sta pch,x	;...and preserve them for display
@@ -133,7 +140,7 @@ call:			;////// entry for 'jmp' or 'sys'
 	sta pcb
 	jsr primm
 !ifdef P500{
-	!pet cr, "monitor", 0
+	!pet cr, "monitor500", 0
 } else{
 
 	!pet cr, "monitor", 0
@@ -1611,5 +1618,7 @@ lec3d:	lda #$8a	; $ec3e: txa
 	ldx xr
 	ldy yr
 	jmp (t0)
+!ifndef P500{
 *= $efff
 	!byte $ff
+}

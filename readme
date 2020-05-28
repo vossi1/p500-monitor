@@ -1,0 +1,8 @@
+cbm 500/600/700 Monitor 
+Original by David Viner (converted from c128)
+comments+labels vossi 05/2020
+converted to P500 by vossi 05/2020
+
+Necessary:
+- P500 patched kernal by vossi
+- P500 patched basic (sys command redirected to kernal)
