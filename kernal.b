@@ -28,7 +28,8 @@ tpiptr	= $41		; pointer to TPI
 stack	= $0100		; Stack
 stackp	= $01ff		; System Stack pointer transx code
 
-jbreak	= $e003		; monitor break entry
+mbreak	= $e003		; monitor break entry
+mirq	= $e013		; monitor irq entry
 
 tpi1	= $de00		; TPI1 active interrupt reg
 air	= $7		; Active interrupt register
@@ -36,6 +37,9 @@ air	= $7		; Active interrupt register
 ; system entrys
 
 bsout	= $ffd2
+ 
+;udtime	= $f979		; update system time
+udtime	= $f980		; update system time
 
 nmi	= $fb31		; nmi
 start	= $f997 	; reset
@@ -43,36 +47,37 @@ start	= $f997 	; reset
 ;start	= $f99e 	; reset P500
 ; -------------------------------------------------------------------------------------------------
 *= $fe00
-irq:	pha
+; $fe00 interrupt handler
+irq:	pha			; save regs
 	txa
 	pha
 	tya
 	pha
-	lda #<(tpi1+air)
+	lda #<(tpi1+air)	; init pointer to TPI1 irq reg
 	sta tpiptr
 	lda #>(tpi1+air)
 	sta tpiptr+1
 	tsx
-	lda stack+4,x
+	lda stack+4,x		; check break flag
 	and #$10
 	beq +
-	jmp jbreak
+	jmp mbreak		; jump to monitor break entry
 +	lda i6509
-	pha
+	pha			; save ibank
 	cld
 	ldy #$00
 	lda #$0f
-	sta i6509
-	lda (tpiptr),y
-	beq ++
+	sta i6509		; switch to systembank
+	lda (tpiptr),y		; and load TPI interrupt reg
+	beq ++			; skip if no irq
 	and #$1e
-	bne +
-	jsr sub1
-	jsr sub2
+	bne +			; skip if not 50/60Hz irq
+	jsr intirq
+	jsr extirq
 +	ldy #$00
-	sta (tpiptr),y
+	sta (tpiptr),y		; clear interrupt
 ++	pla
-	sta i6509
+	sta i6509		; restore ibank, regs
 	pla
 	tay
 	pla
@@ -80,15 +85,15 @@ irq:	pha
 	pla
 	rti
 
-sub1:	lda #$e0
+intirq:	lda #>mirq+2
 	pha
-	lda #$15
+	lda #<mirq+2
 	pha
 	jmp exnmi
 
-sub2:	lda #$f9
+extirq:	lda #>udtime+2
 	pha
-	lda #$7b
+	lda #<udtime+2
 	pha
 	jmp exnmi
 
@@ -133,69 +138,69 @@ iprimm:	pha
 txjmp	sta i6509		; bp routine
 	txa
 	clc
-	adc #2
+	adc #2			; add 2 to target address
 	bcc txjmp1
 	iny
 txjmp1:	tax
 	tya
-	pha
+	pha			; store target+2 to stack
 	txa
 	pha
 	jsr ipinit		; go initilize ipoint
 	lda #$fe
-	sta (ipoint),y
+	sta (ipoint),y		; $fe to top of foreign stack
 ; 04/14/83 bp
 ; transfer exec routines for cbm2
 ; -------------------------------------------------------------------------------------------------
 ; FEB3 Support routine for cross bank calls
-exsub:	php
-	sei
-	pha
-exsub3:	txa			; entry from exnmi
-	pha
+exsub:	php			; save status
+	sei			; disable interrupts
+	pha			; .a
+exsub3:	txa
+	pha			; .x
 	tya
-	pha
-	jsr ipinit
-	tay
-	lda e6509
-	jsr putas
-	lda #<excrt2		;xfer seg rts routn
-	ldx #>excrt2		;xfer seg rts routn
-	jsr putaxs
+	pha			; .y
+	jsr ipinit		; init ipoint and load stack from xfer seg
+	tay			; .y is xfer seg stack pointer
+	lda e6509		; push return segment to user stack
+	jsr putas		; push .a to other stack
+	lda #<excrt2		; xfer seg rts routn
+	ldx #>excrt2		; xfer seg rts routn
+	jsr putaxs		; put .a.x to xfer seg stack
 	tsx
-	lda stack+5,x
+	lda stack+5,x		; .sp +5 is actual routn addr lo
 	sec
-	sbc #$03
-	pha
-	lda stack+6,x
+	sbc #$03		; -3 for jsr to this routn
+	pha			; save .a
+	lda stack+6,x		; hi addr
 	sbc #$00
-	tax
-	pla
-	jsr putaxs
-	tya
+	tax			; .x hi
+	pla			; restore .a lo
+	jsr putaxs		; save .a.x onto xfer seg stack
+	tya			; xfer seg stack pointer
 excomm:	sec
-	sbc #$04
-	sta stackp
-	tay
-	ldx #$04
+	sbc #$04		; 4 bytes .y.x.a.p
+	sta stackp		; xfer seg new stack pointer temp storage
+	tay			; use this as new pointer also
+	ldx #$04		; 4 bytes .y.x.a.p
 exsu10:	pla
 	iny
-	sta (ipoint),y
+	sta (ipoint),y		; push regs from this stack to xfer seg stack
 	dex
 	bne exsu10
-	ldy stackp
-	lda #<expul2
-	ldx #>expul2
-	jsr putaxs
-	pla
-	pla
+	ldy stackp		; restore .y as stack pointer for xfer seg
+	lda #<expul2		; pull regs and rts routn
+	ldx #>expul2		; .hi prendn routn in xfer seg
+	jsr putaxs		; put .a.x on xfer seg stack
+	pla			; fix stack
+	pla			; fix stack
 exgby:	tsx
-	stx stackp
-	tya
+	stx stackp		; save current stack pointer this seg
+	tya			; .y is stack pointer for xfer seg
 	tax
-	txs
-	lda i6509
-	jmp gbye
+	txs			; new stack for xfer seg
+	lda i6509		; xfer seg #
+	jmp gbye		; good bye
 ; -------------------------------------------------------------------------------------------------
 	nop			; returns here if rti
 ; FF06 Return from call to foreign bank
@@ -208,7 +213,7 @@ excrts: php			; P
 	tya
 	pha			; Y
 	tsx
-	lda stack+6,x		; sp +7 is return seg
+	lda stack+6,x		; sp +6 is return seg
 	sta i6509		; restore i6509 to return seg
 	jsr ipinit		; init ipoint and load stack from xfer seg
 	jmp excomm

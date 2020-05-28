@@ -3,6 +3,9 @@
 ; comments+labels vossi 05/2020
 !cpu 6502
 !ct pet
+; switches
+;P500	= 1
+
 !to "monitor.prg", cbm
 !initmem $ff
 
@@ -99,7 +102,7 @@ hw_irq	= $fffe
 *= $e000
 monitor:
 	jmp call	;'jmp' entry
-	jmp break	;'brk' entry
+mbreak:	jmp break	;'brk' entry
 	jmp moncmd	;command parser
 ; $e009
 break:  		;////// entry for 'brk'
@@ -116,7 +119,7 @@ break:  		;////// entry for 'brk'
 	bmi start
 ; $e021
 call:			;////// entry for 'jmp' or 'sys'
-	jsr disbel	; set mode=$ff, esc-h = disable bell
+	jsr setmod	; set 40/80 col mode, enable bell if cbm2
 	lda #$00
 	sta acc		;clear everything up for user
 	sta xr
@@ -129,7 +132,12 @@ call:			;////// entry for 'jmp' or 'sys'
 	lda $00
 	sta pcb
 	jsr primm
+!ifdef P500{
 	!pet cr, "monitor", 0
+} else{
+
+	!pet cr, "monitor", 0
+}
 ; $e046
 start:  
 	cld
@@ -139,9 +147,7 @@ start:
 	jsr _setmsg	;enable kernal control & error messages
 	cli		;start monitor: fall thru 'dspreg' to 'main'
 ;***********************************************************
-;
 ;	Display contents of storage registers
-;
 ;***********************************************************
 ; $e050
 dspreg:
@@ -302,9 +308,7 @@ le13b:	ldx $01
 	rts
 	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 ;********************************************
-;
 ;	Display memory command
-;
 ;********************************************
 ; $e152
 dspmem:
@@ -1488,7 +1492,13 @@ leb66:  jsr crlf
 	ldy #$02
 	bne leb2f
 
-disbel:  lda hw_irq
+setmod:
+!ifdef P500{
+	lda #$00
+	sta mode
+	rts
+} else{
+	lda hw_irq
 	cmp #$00
 	bne +
 	lda #$ff
@@ -1498,7 +1508,8 @@ disbel:  lda hw_irq
 	jsr primm
 	!pet esc, "h", 0
 	rts
-
+}
+*= $eb87
 leb87:  lda #$ab
 	sta $5d
 	lda #$03
