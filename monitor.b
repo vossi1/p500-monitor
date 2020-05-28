@@ -1,7 +1,6 @@
-; cbm 600/700 Monitor by David Viner
+; cbm 600/700 Monitor by David Viner (converted from c128)
 ; MONITOR.PRG
-; disassembled by DASM6502b v.3.1 by Marat Fayzullin
-; modified by Vossi 02/2019
+; comments+labels vossi 05/2020
 !cpu 6502
 !ct pet
 !to "monitor.prg", cbm
@@ -9,6 +8,7 @@
 
 ; constants
 cr	= $0d
+esc	= $1b
 ; -------------------------------------------------------------------------------------------------
 ; zero page stuff
 pcb	= $02
@@ -92,6 +92,8 @@ _cmpar	= $ff7a
 _gosub	= $ff6e
 _goto	= $ff71
 _setmsg	= $ff90
+
+hw_irq	= $fffe
 ; -------------------------------------------------------------------------------------------------
 ;///////////   M O N I T O R   J U M P   E N T R Y   P O I N T S   \\\\\\\\\\\\
 *= $e000
@@ -99,7 +101,7 @@ monitor:
 	jmp call	;'jmp' entry
 	jmp break	;'brk' entry
 	jmp moncmd	;command parser
-
+; $e009
 break:  		;////// entry for 'brk'
 	jsr primm
 	!pet cr, "break", 7, 0
@@ -112,9 +114,9 @@ break:  		;////// entry for 'brk'
 	dex
 	bpl -		; (notice pc will be wrong- processor bug)
 	bmi start
-
+; $e021
 call:			;////// entry for 'jmp' or 'sys'
-	jsr leb72			;must have system roms, ram0, & i/o in
+	jsr disbel	; set mode=$ff, esc-h = disable bell
 	lda #$00
 	sta acc		;clear everything up for user
 	sta xr
@@ -128,23 +130,24 @@ call:			;////// entry for 'jmp' or 'sys'
 	sta pcb
 	jsr primm
 	!pet cr, "monitor", 0
-
+; $e046
 start:  
 	cld
 	tsx
 	stx sp		;get stack pointer for register display
 	lda #$c0
-	jsr $ff90			;enable kernal control & error messages
+	jsr _setmsg	;enable kernal control & error messages
 	cli		;start monitor: fall thru 'dspreg' to 'main'
 ;***********************************************************
 ;
 ;	Display contents of storage registers
 ;
 ;***********************************************************
+; $e050
 dspreg:
 	jsr primm	;register legends
 	!pet cr, "    pc  sr ac xr yr sp"
-	!pet cr, "; ", $1b, "q", 0
+	!pet cr, "; ", esc, "q", 0
 	lda pcb
 	jsr makhex
 	txa
@@ -158,7 +161,7 @@ dspreg:
 	iny
 	cpy #8
 	bcc -
-
+; $e08b
 main:
 	jsr crlf
 	ldx #0
@@ -182,19 +185,19 @@ main:
 	nop
 	nop
 	nop
-
+; $e0b2
 moncmd:
 	ldx #$15	;compare first char to list of valid commands
 -	cmp cmdchr,x
 	beq main1	;found it in list!
 	dex
 	bpl -
-			;checked entire list, not found. fall into 'error'
+; $e0c2			;checked entire list, not found. fall into 'error'
 error:
 	jsr primm
 	!pet $1d, "?", 0
 	jmp main
-
+; $e0c9
 main1:
 	cpx #cmdls	;is command 'L'oad, 'S'ave, or 'V'erify?
 	bcs +		;...branch if so:  can't use parse!
@@ -216,8 +219,10 @@ main1:
 	jmp lodsav	;...and jump to common load/save/verify routine
 
 ++	jmp convert	;simply evaluate number & print its value
-
-	!byte $60, $00, $00
+; $e0e3
+exit:
+	rts
+	!byte $00, $00
 ; $e0e6
 cmdchr
 	!byte 'a'	;assemble
@@ -258,24 +263,36 @@ cmdtbl:
 	!word disasm-1
 	!word fill-1
 
-	!byte $d5, $e1, $cd, $e2, $0b, $ec, $51, $e1
-	!byte $4f, $e0, $33, $e2, $e2, $e0, $8f, $ea
-	!byte $05, $e4, $aa, $e1, $93, $e1
+	!word go-1
+	!word hunt-1
+	!word gosub-1
+	!word dspmem-1
+	!word dspreg-1
+	!word trnsfr
+	!word exit-1
+
+	!word disk-1
+	!word assem-1
+	!word setmem-1
+	!word setreg-1
+; $e11a
 le11a:	jsr $e12f
 	lda (t2),y
-	jmp le127
+	jmp +
 le122:	jsr le12f
 	sta (t2),y
-le127:	ldx $30
++	ldx $30
 	stx $01
 	ldx $03b2
 	rts
+
 le12f:	stx $03b2
 	ldx $01
 	stx $30
 	ldx t2+2
 	stx $01
 	rts
+
 le13b:	ldx $01
 	lda #$0f
 	sta $01
@@ -284,14 +301,22 @@ le13b:	ldx $01
 	stx $01
 	rts
 	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-	bcs $e15c
+;********************************************
+;
+;	Display memory command
+;
+;********************************************
+; $e152
+dspmem:
+	bcs +
 	jsr $e901
-	jsr $e7a7
-	bcc $e162
-le15c:  lda #$0b
+	jsr parse
+	bcc ++
+
++	lda #$0b
 	sta t0
 	bne le177
-le162:  jsr le90e
+++	jsr le90e
 	bcc le191
 	ldx #$03
 	bit mode
@@ -314,6 +339,8 @@ le186:  jsr le952
 	bcs le177
 le18e:  jmp main
 le191:  jmp error
+; $e194
+setreg:
 	jsr le974
 	ldy #$00
 le199:  jsr parse
@@ -324,6 +351,8 @@ le199:  jsr parse
 	cpy #$05
 	bcc le199
 le1a8:  jmp main
+; $e1ab
+setmem:
 	bcs le1c9
 	jsr le901
 	ldy #$00
@@ -339,9 +368,11 @@ le1b2:  jsr parse
 le1c5:  cpy #$08
 	bcc le1b2
 le1c9:  jsr primm
-	!pet $1b, "o", $91, 0
+	!pet esc, "o", $91, 0
 	jsr le1e8
 	jmp main
+; $e1d6
+go:
 	jsr le974
 	ldx sp
 	txs
@@ -392,6 +423,7 @@ le22c:  cpy #$08
 
 compar:
 	lda #$00
+trnsfr:
 	bit $80a9
 	sta verck
 	lda #$00
@@ -461,6 +493,8 @@ le2c3:  jsr le950
 le2c6:  jsr le93c
 	bcs le27f
 le2cb:  jmp main
+
+hunt:
 	jsr le983
 	bcs le334
 	ldy #$00
@@ -562,11 +596,12 @@ le3a9:  lda #$00
 	jsr lebca
 	lda verck
 	cmp #$56
-	beq le3bc+1
+	beq +
 	cmp #$4c
 	bne le35c
 	lda #$00
-le3bc:	bit $80a9	; $e3bd lda #$80
+	!byte $2c	; skip next
++	lda #$80
 	ldx t2
 	ldy t2+1
 	ora t2+2
@@ -735,7 +770,7 @@ le52a:  lda $03b1
 	jsr le122
 	jsr le8ad
 	jsr primm
-	!pet "a ", $1b, "q", 0
+	!pet "a ", esc, "q", 0
 	jsr le5dc
 	inc $03ab
 	lda $03ab
@@ -785,7 +820,7 @@ le5a3:  lda #$14
 le5a9:  jsr le90e
 	bcc le5d1
 le5ae:  jsr primm
-	!pet cr, $1b, "q", 0
+	!pet cr, esc, "q", 0
 	jsr $ffe1
 	beq le5ce
 	jsr le5d4
@@ -991,17 +1026,18 @@ parse:  jsr le7ce
 	bne le7ba
 	dec txtptr
 	lda $03b4
-	bne le7c8+1
+	bne le7c9
 	beq le7c7
 le7ba:  cmp #$20
-	beq le7c8+1
+	beq le7c9
 	cmp #$2c
-	beq le7c8+1
+	beq le7c9
 le7c2:  pla
 	pla
 	jmp error
 le7c7:  sec
-le7c8:	bit $18		; $e7c9 clc
+	!byte $24	; skip next
+le7c9:	clc
 	lda $03b4
 	rts
 le7ce:  lda #$00
@@ -1015,7 +1051,7 @@ le7ce:  lda #$00
 	pha
 le7dd:  jsr gnc
 	bne le7e5
-	jmp le87d+1
+	jmp le87e
 le7e5:  cmp #$20
 	beq le7dd
 	ldx #$03
@@ -1029,15 +1065,15 @@ le7f6:  ldy bases,x
 	lda shifts,x
 	sta $03b6
 le7ff:  jsr gnc
-	beq le87d+1
+	beq le87e
 	sec
 	sbc #$30
-	bcc le87d+1
+	bcc le87e
 	cmp #$0a
 	bcc le813
 	sbc #$07
 	cmp #$10
-	bcs le87d+1
+	bcs le87e
 le813:  sta $03b5
 	cpy $03b5
 	bcc le87c
@@ -1088,7 +1124,8 @@ le862:  clc
 	bne le87c
 	beq le7ff
 le87c:  sec
-le87d:	bit $18		; $e87e clc
+	!byte $24	; skip next
+le87e:	clc
 	sty $03b6
 	pla
 	tay
@@ -1096,8 +1133,10 @@ le87d:	bit $18		; $e87e clc
 	tax
 	lda $03b4
 	rts
+
 bases:	!byte 16,10, 8, 2
 shifts:	!byte  4, 3, 3, 1
+
 le892:	lda t2+2
 	jsr makhex
 	txa
@@ -1117,7 +1156,7 @@ le8ad:  jsr primm
 crlf:  lda #$0d
 	jmp bsout
 le8b9:  jsr primm
-	!pet cr, $1b, "q ", 0
+	!pet cr, esc, "q ", 0
 	rts
 puthex:  stx $03af
 	jsr makhex
@@ -1222,10 +1261,10 @@ le974:  bcs le982
 	sty pch
 	stx pcb
 le982:  rts
-le983:  bcs le9ae+1
+le983:  bcs +
 	jsr le901
 	jsr parse
-	bcs le9ae+1
+	bcs +
 	lda t0
 	sta $03b7
 	lda t0+1
@@ -1239,9 +1278,10 @@ le983:  bcs le9ae+1
 	sta t1+1
 	lda t0+2
 	sta t1+2
-	bcc le9ae+1
+	bcc +
 	clc
-le9ae:	bit $38		; $e9af sec
+	!byte $24	; skip next
++	sec
 	rts
 convert:  jsr le7a5
 	jsr le8b9
@@ -1344,9 +1384,12 @@ lea84:  inc $03b4
 lea8c:  dex
 	bne lea63
 	rts
-	bne lea94+1
+
+disk:
+	bne +
 	ldx #$08
-lea94:	bit $60a6	; $ea95 ldx $60
+	!byte $2c	; skip next
++	ldx t0
 	cpx #$04
 	bcc leb00
 	cpx #$1f
@@ -1444,15 +1487,18 @@ leb66:  jsr crlf
 	beq leaf4
 	ldy #$02
 	bne leb2f
-leb72:  lda $fffe
+
+disbel:  lda hw_irq
 	cmp #$00
-	bne leb7b+1
+	bne +
 	lda #$ff
-leb7b:	bit $00a9	; $eb7c lda #$00
+	!byte $2c	; skik next
++	lda #$00
 	sta mode
 	jsr primm
-	!pet $1b, "h", 0
+	!pet esc, "h", 0
 	rts
+
 leb87:  lda #$ab
 	sta $5d
 	lda #$03
@@ -1515,6 +1561,8 @@ lebed:  jsr le13b
 lebff:	jsr primm
 	!pet " error", 0
 	jmp main
+
+gosub:
 	jsr le974
 	lda pcb
 	cmp $00
@@ -1551,6 +1599,6 @@ lec3d:	lda #$8a	; $ec3e: txa
 	lda acc
 	ldx xr
 	ldy yr
-	jmp ($0060)
+	jmp (t0)
 *= $efff
 	!byte $ff
