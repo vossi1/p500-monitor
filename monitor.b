@@ -63,22 +63,19 @@ keyd	= $34a		;keyboard buffer
 stavec	= $2af+10	;'stash' indirect
 cmpvec	= $2be+10	;'cmpare' indirect
 
-	* = $0a80	;monitor's domain
-
-xcnt	*=*+32		;compare buffer
-hulp	*=*+10
-format	*=*+1
-length	*=*+1		;asm/dis
-msal	*=*+3		;for assembler
-sxreg	*=*+1		;1 byte temp used all over
-syreg	*=*+1		;1 byte temp used all over
-wrap	*=*+1		;1 byte temp for assembler
-xsave	*=*+1		;save .x here during indirect subroutine calls
-direction	= $03b3	;direction indicator for 'transfer'
-count	*=*+1		;parse number conversion
-number	*=*+1		;parse number conversion
-shift	*=*+1		;parse number conversion
-temps		= $03b7
+xcnt	= $0380		;compare buffer
+hulp	= $03a0
+format	= $03aa
+length	= $03ab		;asm/dis
+msal	= $03ac		;for assembler
+sxreg	= $03af		;1 byte temp used all over
+wrap	= $03b1		;1 byte temp for assembler
+xsave	= $03b2		;save .x here during indirect subroutine calls
+dir	= $03b3		;direction indicator for 'transfer'
+count	= $03b4		;parse number conversion
+number	= $03b5		;parse number conversion
+shift	= $03b6		;parse number conversion
+temps	= $03b7
 ; -------------------------------------------------------------------------------------------------
 ; system entrys
 
@@ -293,10 +290,10 @@ stash:	jsr ++
 	sta (t2),y
 +	ldx $30
 	stx i6509
-	ldx $03b2
+	ldx xsave
 	rts
 
-++	stx $03b2
+++	stx xsave
 	ldx i6509
 	stx $30
 	ldx t2+2
@@ -475,7 +472,7 @@ trnsfr:
 	lda #$80	;flag 'transfer'
 	sta verck
 	lda #$00
-	sta direction
+	sta dir
 	jsr range	;get source in t2, length in t1
 	bcs trnerr
 	jsr parse	;get destination in t0
@@ -510,7 +507,7 @@ trnsrc:	lda temps,x	;restore ea as source (saved @ 'range')
 	bpl trnsrc
 
 	lda #$80
-	sta direction	;flag backwards direction
+	sta dir		;flag backwards direction
 
 trnnxln:jsr crlf	;start with a new line
 	ldy #0
@@ -536,7 +533,7 @@ trncmp:	stx i6509	;restore ibank
 	jsr putspc	;make each number 8 bytes to look pretty
 	jsr putspc
 
-trnequ: bit direction
+trnequ: bit dir
 	bmi trndir	;test direction of transfers
 
 	inc t0		;normal
@@ -561,51 +558,70 @@ trnx:	jmp main
 ;******************************************************************
 ; $e2ce
 hunt:
-	jsr range
-	bcs le334
-	ldy #$00
-	jsr gnc
-	cmp #$27
-	bne le2f2
-	jsr gnc
-	cmp #$00
-	beq le334
-le2e3:  sta $0380,y
+	jsr range	;get sa in t2, calculate length, put in t1
+	bcs hunerr	;...error if eol
+	ldy #0
+	jsr gnc		;get first char
+	cmp #$27	;is it an <'>
+	bne hunhex		;no-  must be hex
+	jsr gnc		;yes- get first string chr
+	cmp #0
+	beq hunerr	;...branch if true eol (error)
+
+hunnxch:sta xcnt,y
 	iny
-	jsr gnc
-	beq le307
-	cpy #$20
-	bne le2e3
-	beq le307
-le2f2:  sty bad
-	jsr le7a5
-le2f8:  lda t0
-	sta $0380,y
+	jsr gnc		;get next
+	beq hunstrt	;yes-end of string
+	cpy #32		;no-32 char yet?
+	bne hunnxch	;no-get more
+	beq hunstrt	;yes-go look for it
+
+hunhex	sty bad		;zero for rdob
+	jsr pargot	;finish hex read
+
+hunnxhx:lda t0
+	sta xcnt,y
 	iny
-	jsr parse
-	bcs le307
-	cpy #$20
-	bne le2f8
-le307:  sty verck
-	jsr crlf
-le30c:  ldy #$00
-le30e:  jsr fetch
-	cmp $0380,y
-	bne le324
+	jsr parse	;get next character
+	bcs hunstrt	;no more -go look for bytes
+	cpy #$20	;32 bytes yet?
+	bne hunnxhx	;no-get more
+
+hunstrt:sty verck	;yes-start search
+	jsr crlf	;next line
+
+hunlp:	ldy #$00
+
+hunstlp:jsr fetch	;get a byte from memory
+	cmp xcnt,y
+	bne hundiff	;...branch if no match
 	iny
-	cpy verck
-	bne le30e
-	jsr putt2
+	cpy verck	;checked full string?
+	bne hunstlp	;no-check on
+
+	jsr putt2	;print address found
+	jsr putspc	;pretty up to 8 bytes
 	jsr putspc
-	jsr putspc
-le324:  jsr $ffe1
-	beq le331
+
+hundiff:jsr stop
+	beq hunx	;...branch if user requests abort
 	jsr inct2
 	jsr dect1
-	bcs le30c
-le331:  jmp main
-le334:  jmp error
-lodsav:  jsr lebae
+	bcs hunlp	;loop if not done
+
+hunx:	jmp main
+
+hunerr:	jmp error
+;************************************************************
+; load/save/verify
+;
+; l ["name"] [,device_number] [,alt_load_address]
+; v ["name"] [,device_number] [,alt_load_address]
+; s "name", device_number, starting_address, ending_address
+;************************************************************
+; $e337
+lodsav:
+	jsr lebae
 le33a:  jsr gnc
 	beq le3a3
 	cmp #$20
@@ -701,7 +717,7 @@ assem:
 	jsr t0tot2
 le40b:  ldx #$00
 	stx $03a1
-	stx $03b4
+	stx count
 le413:  jsr gnc
 	bne le41f
 	cpx #$00
@@ -709,45 +725,45 @@ le413:  jsr gnc
 	jmp main
 le41f:  cmp #$20
 	beq le40b
-	sta $03ac,x
+	sta msal,x
 	inx
 	cpx #$03
 	bne le413
 le42b:  dex
 	bmi le445
-	lda $03ac,x
+	lda msal,x
 	sec
 	sbc #$3f
 	ldy #$05
 le436:  lsr
 	ror $03a1
-	ror $03a0
+	ror hulp
 	dey
 	bne le436
 	beq le42b
 le442:  jmp error
 le445:  ldx #$02
-le447:  lda $03b4
+le447:  lda count
 	bne le47c
 	jsr le7ce
 	beq le47a
 	bcs le442
 	lda #$24
-	sta $03a0,x
+	sta hulp,x
 	inx
 	lda t0+2
 	bne le442
 	ldy #$04
-	lda $03b6
+	lda shift
 	cmp #$08
 	bcc le46b
-	cpy $03b4
+	cpy count
 	beq le471
 le46b:  lda t0+1
 	bne le471
 	ldy #$02
 le471:  lda #$30
-le473:  sta $03a0,x
+le473:  sta hulp,x
 	inx
 	dey
 	bne le473
@@ -756,19 +772,19 @@ le47c:  jsr gnc
 	beq le48f
 	cmp #$20
 	beq le447
-	sta $03a0,x
+	sta hulp,x
 	inx
 	cpx #$0a
 	bcc le447
 	bcs le442
 le48f:  stx t1
 	ldx #$00
-	stx $03b1
+	stx wrap
 le496:  ldx #$00
 	stx $9f
-	lda $03b1
+	lda wrap
 	jsr le659
-	ldx $03aa
+	ldx format
 	stx t1+1
 	tax
 	lda $e761,x
@@ -778,16 +794,16 @@ le496:  ldx #$00
 	ldx #$06
 le4b4:  cpx #$03
 	bne le4cc
-	ldy $03ab
+	ldy length
 	beq le4cc
-le4bd:  lda $03aa
+le4bd:  lda format
 	cmp #$e8
 	lda #$30
 	bcs le4e4
 	jsr le57c
 	dey
 	bne le4bd
-le4cc:  asl $03aa
+le4cc:  asl format
 	bcc le4df
 	lda $e714,x
 	jsr le57f
@@ -803,7 +819,7 @@ le4ea:  lda t1
 	cmp $9f
 	beq le4f3
 	jmp le58b
-le4f3:  ldy $03ab
+le4f3:  ldy length
 	beq le52a
 	lda t1+1
 	cmp #$9d
@@ -826,20 +842,20 @@ le511:  tay
 le519:  dex
 	dex
 	txa
-	ldy $03ab
+	ldy length
 	bne le524
 le521:  lda $005f,y
 le524:  jsr stash
 	dey
 	bne le521
-le52a:  lda $03b1
+le52a:  lda wrap
 	jsr stash
 	jsr le8ad
 	jsr primm
 	!pet "a ", esc, "q", 0
 	jsr le5dc
-	inc $03ab
-	lda $03ab
+	inc length
+	lda length
 	jsr addt2
 	lda #$41
 	sta keyd
@@ -862,17 +878,17 @@ le52a:  lda $03b1
 	jmp main
 le579:  jmp error
 le57c:  jsr le57f
-le57f:  stx $03af
+le57f:  stx sxreg
 	ldx $9f
-	cmp $03a0,x
+	cmp hulp,x
 	beq le593
 	pla
 	pla
-le58b:  inc $03b1
+le58b:  inc wrap
 	beq le579
 	jmp le496
 le593:  inc $9f
-	ldx $03af
+	ldx sxreg
 	rts
 
 disasm:
@@ -890,10 +906,10 @@ le5ae:  jsr primm
 	jsr $ffe1
 	beq le5ce
 	jsr le5d4
-	inc $03ab
-	lda $03ab
+	inc length
+	lda length
 	jsr addt2
-	lda $03ab
+	lda length
 	jsr le924
 	bcs le5ae
 le5ce:  jmp main
@@ -907,7 +923,7 @@ le5dc:  jsr putt2
 	jsr fetch
 	jsr le659
 	pha
-	ldx $03ab
+	ldx length
 	inx
 le5ef:  dex
 	bpl le5fc
@@ -925,9 +941,9 @@ le602:  iny
 	ldx #$06
 le60f:  cpx #$03
 	bne le62a
-	ldy $03ab
+	ldy length
 	beq le62a
-le618:  lda $03aa
+le618:  lda format
 	cmp #$e8
 	php
 	jsr fetch
@@ -936,7 +952,7 @@ le618:  lda $03aa
 	jsr puthex
 	dey
 	bne le618
-le62a:  asl $03aa
+le62a:  asl format
 	bcc le63d
 	lda $e714,x
 	jsr bsout
@@ -983,9 +999,9 @@ le677:  ldy #$80
 	lda #$00
 le67b:  tax
 	lda $e707,x
-	sta $03aa
+	sta format
 	and #$03
-	sta $03ab
+	sta length
 	tya
 	and #$8f
 	tax
@@ -1085,13 +1101,13 @@ mnemr
 regk
 	!byte cr,$20,$20,$20
 
-le7a5:	dec txtptr
+pargot:	dec txtptr
 parse:  jsr le7ce
 	bcs le7c2
 	jsr le8e7
 	bne le7ba
 	dec txtptr
-	lda $03b4
+	lda count
 	bne le7c9
 	beq le7c7
 le7ba:  cmp #$20
@@ -1104,13 +1120,13 @@ le7c2:  pla
 le7c7:  sec
 	!byte $24	; skip next
 le7c9:	clc
-	lda $03b4
+	lda count
 	rts
 le7ce:  lda #$00
 	sta t0
 	sta t0+1
 	sta t0+2
-	sta $03b4
+	sta count
 	txa
 	pha
 	tya
@@ -1129,7 +1145,7 @@ le7eb:  cmp cmdnum,x
 	dec txtptr
 le7f6:  ldy bases,x
 	lda shifts,x
-	sta $03b6
+	sta shift
 le7ff:  jsr gnc
 	beq le87e
 	sec
@@ -1140,11 +1156,11 @@ le7ff:  jsr gnc
 	sbc #$07
 	cmp #$10
 	bcs le87e
-le813:  sta $03b5
-	cpy $03b5
+le813:  sta number
+	cpy number
 	bcc le87c
 	beq le87c
-	inc $03b4
+	inc count
 	cpy #$0a
 	bne le82e
 	ldx #$02
@@ -1152,7 +1168,7 @@ le826:  lda t0,x
 	sta temps,x
 	dex
 	bpl le826
-le82e:  ldx $03b6
+le82e:  ldx shift
 le831:  asl t0
 	rol t0+1
 	rol t0+2
@@ -1176,7 +1192,7 @@ le831:  asl t0
 	sta t0+2
 	bcs le87c
 le862:  clc
-	lda $03b5
+	lda number
 	adc t0
 	sta t0
 	txa
@@ -1192,12 +1208,12 @@ le862:  clc
 le87c:  sec
 	!byte $24	; skip next
 le87e:	clc
-	sty $03b6
+	sty shift
 	pla
 	tay
 	pla
 	tax
-	lda $03b4
+	lda count
 	rts
 
 bases:	!byte 16,10, 8, 2
@@ -1226,11 +1242,11 @@ crlf:  lda #$0d
 le8b9:  jsr primm
 	!pet cr, esc, "q ", 0
 	rts
-puthex:  stx $03af
+puthex:  stx sxreg
 	jsr makhex
 	jsr bsout
 	txa
-	ldx $03af
+	ldx sxreg
 	jmp bsout
 makhex:  pha
 	jsr le8dc
@@ -1247,7 +1263,7 @@ le8dc:  and #$0f
 le8e4:  adc #$30
 	rts
 le8e7:  dec txtptr
-gnc:  stx $03af
+gnc:  stx sxreg
 	ldx txtptr
 	lda buf,x
 	beq le8f9
@@ -1256,7 +1272,7 @@ gnc:  stx $03af
 	cmp #$3f
 le8f9:  php
 	inc txtptr
-	ldx $03af
+	ldx sxreg
 	plp
 	rts
 t0tot2:  lda t0
@@ -1278,10 +1294,10 @@ sub0m2:  sec
 	sta t0+2
 	rts
 dect0:  lda #$01
-le924:  sta $03af
+le924:  sta sxreg
 	sec
 	lda t0
-	sbc $03af
+	sbc sxreg
 	sta t0
 	lda t0+1
 	sbc #$00
@@ -1351,7 +1367,7 @@ range:  bcs +
 	!byte $24	; skip next
 +	sec
 	rts
-convert:  jsr le7a5
+convert:  jsr pargot
 	jsr le8b9
 	lda #$24
 	jsr bsout
@@ -1389,7 +1405,7 @@ le9c7:  lda t0
 lea07:  jsr t0tot2
 	lda #$00
 	ldx #$07
-lea0e:  sta $03a0,x
+lea0e:  sta hulp,x
 	dex
 	bpl lea0e
 	inc $03a7
@@ -1404,8 +1420,8 @@ lea1c:  lsr t2+2
 	clc
 	ldx #$03
 lea27:  lda $03a4,x
-	adc $03a0,x
-	sta $03a0,x
+	adc hulp,x
+	sta hulp,x
 	dex
 	bpl lea27
 lea33:  clc
@@ -1425,18 +1441,18 @@ lea47:  pha
 	lda t0+1
 	sta $03a1
 	lda t0+2
-	sta $03a0
+	sta hulp
 	lda #$00
 	sta $03a3
 	pla
-lea5d:  sta $03b4
-	sty $03b6
-lea63:  ldy $03b6
+lea5d:  sta count
+	sty shift
+lea63:  ldy shift
 	lda #$00
 lea68:  asl $03a3
 	rol $03a2
 	rol $03a1
-	rol $03a0
+	rol hulp
 	rol
 	dey
 	bpl lea68
@@ -1444,9 +1460,9 @@ lea68:  asl $03a3
 	bne lea84
 	cpx #$01
 	beq lea84
-	ldy $03b4
+	ldy count
 	beq lea8c
-lea84:  inc $03b4
+lea84:  inc count
 	ora #$30
 	jsr bsout
 lea8c:  dex
