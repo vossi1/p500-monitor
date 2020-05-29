@@ -120,10 +120,10 @@ break:  		;////// entry for 'brk'
 	nop
 }
 	ldx #5
--	pla		;pull pc, registers & status off stack...
+cpyregs:pla		;pull pc, registers & status off stack...
 	sta pch,x	;...and preserve them for display
 	dex
-	bpl -		; (notice pc will be wrong- processor bug)
+	bpl cpyregs	; (notice pc will be wrong- processor bug)
 	bmi start
 ; $e021
 call:			;////// entry for 'jmp' or 'sys'
@@ -170,42 +170,42 @@ dspreg:
 	jsr puthex	;display pc high
 
 	ldy #2
--	lda pcb,y
+dsplp:	lda pcb,y
 	jsr puthxs	;display rest, separated by spaces
 	iny
 	cpy #8
-	bcc -
-; $e08b
+	bcc dsplp
+; $e08b main loop
 main:
-	jsr crlf
+	jsr crlf	; print cr+lp
 	ldx #0
 	stx txtptr
-
--	jsr basin	;read one line (up to <cr>) into buffer
+; line input
+mainlp:	jsr basin	;read one line (up to <cr>) into buffer
 	sta buf,x
 	inx
 	cpx #161
 	bcs error	;...branch if 'line too long'
 	cmp #cr
-	bne -		;loop until end of line
+	bne mainlp	;loop until end of line
 
 	lda #0
 	sta buf-1,x	;flag end of line
 
--	jsr gnc	  	;get a character from buffer
+mgetchr:jsr gnc	  	;get a character from buffer
 	beq main	;end of line
 	cmp #' '	;skip leading spaces
-	beq -
+	beq mgetchr
 	nop
 	nop
 	nop
 ; $e0b2
 moncmd:
 	ldx #$15	;compare first char to list of valid commands
--	cmp cmdchr,x
+mcmdlp:	cmp cmdchr,x
 	beq main1	;found it in list!
 	dex
-	bpl -
+	bpl mcmdlp
 ; $e0c2			;checked entire list, not found. fall into 'error'
 error:
 	jsr primm
@@ -214,10 +214,10 @@ error:
 ; $e0c9
 main1:
 	cpx #cmdls	;is command 'L'oad, 'S'ave, or 'V'erify?
-	bcs +		;...branch if so:  can't use parse!
+	bcs mcmdls	;...branch if so:  can't use parse!
 
 	cpx #cmdno	;is it a number to evaluate?
-	bcs ++		;...branch if so
+	bcs mcmdno	;...branch if so
 
 	txa		;multiply index by two
 	asl
@@ -229,10 +229,10 @@ main1:
 	pha
 	jmp parse	;parse first arg, and rts to correct command routine
 
-+	sta verck	;save copy of what command was,
+mcmdls:	sta verck	;save copy of what command was,
 	jmp lodsav	;...and jump to common load/save/verify routine
 
-++	jmp convert	;simply evaluate number & print its value
+mcmdno	jmp convert	;simply evaluate number & print its value
 ; $e0e3
 exit:
 	rts
@@ -628,7 +628,7 @@ hunerr:	jmp error
 ;************************************************************
 ; $e337
 lodsav:
-	jsr lsinit	; init defaults
+	jsr lsinit	;init defaults
 lsspc:  jsr gnc		;look for name
 	beq lsload	;branch if no name (must be default load)
 	cmp #' '
@@ -670,13 +670,13 @@ lsgo:	stx txtptr
 	sta sa
 	ldx #$02
 lsadrcp:lda t2,x
-	sta stal,x	; copy start adr kernal pointer
+	sta stal,x	;copy start adr kernal pointer
 	lda t0,x
-	sta eal,x	; copy end adr to kernal pointer
+	sta eal,x	;copy end adr to kernal pointer
 	dex
 	bpl lsadrcp
-	jsr fparcpy	; copy file parameter to system bank
-	ldx #stal	; load parameter address for kernal routine
+	jsr fparcpy	;copy file parameter to system bank
+	ldx #stal	;load parameter address for kernal routine
 	ldy #eal
 	jsr _save	;do save
 	jmp main
@@ -707,199 +707,241 @@ verify	lda #$80	;flag for verify
 *= $e3db
 ; $e3db
 fill:
-	jsr range
-	bcs le403
+	jsr range	;sa in t2, len in t1
+	bcs filerr	;error if eol
+
 	lda t2+2
-	cmp $03b9
-	bne le403
-	jsr parse
-	bcs le403
-	ldy #$00
-le3ee:  lda t0
-	jsr stash
+	cmp temps+2
+	bne filerr	;prevent bank wraps
+
+	jsr parse	;get fill value
+	bcs filerr
+	ldy #0
+
+fillp:  lda t0
+	jsr stash	;fill memory byte by byte (without comparison check)
 	jsr stop
-	beq le400
+	beq filx	;branch if user wants to abort
 	jsr inct2
 	jsr dect1
-	bcs le3ee
-le400:  jmp main
-le403:  jmp error
+	bcs fillp
 
+filx:	jmp main
+
+filerr:	jmp error
+;**********************************************************
+;  simple assembler
+;  syntax:      a 1111 lda ($00,x)
+; 	      a 1111 dex:		(':' = terminator)
+;**********************************************************
+; $e406
 assem:
-	bcs le442
-	jsr t0tot2
-le40b:  ldx #$00
-	stx $03a1
-	stx count
-le413:  jsr gnc
-	bne le41f
-	cpx #$00
-	bne le41f
-	jmp main
-le41f:  cmp #$20
-	beq le40b
-	sta msal,x
+	bcs aserr	;...branch if missing sa
+	jsr t0tot2	;save sa
+
+asspc:  ldx #0
+	stx hulp+1	;clear left mnemonic
+	stx count	;clear operand
+
+asnxchr:jsr gnc		;get a char
+	bne aspars	;check for eol
+	cpx #0
+	bne aspars
+	jmp main	;if eol & no mnemonic, exit cleanly
+
+aspars:	cmp #' '	;is it a space ?
+	beq asspc	;yes - start again (passes over object code, if any)
+	sta msal,x      ;no - save char
 	inx
-	cpx #$03
-	bne le413
-le42b:  dex
-	bmi le445
-	lda msal,x
-	sec
-	sbc #$3f
-	ldy #$05
-le436:  lsr
-	ror $03a1
-	ror hulp
-	dey
-	bne le436
-	beq le42b
-le442:  jmp error
-le445:  ldx #$02
-le447:  lda count
+	cpx #3	  	;got three chars ?
+	bne asnxchr	;no - loop
+
+asnxmch:dex		;squished all three ? (3x5bits in hulp,hulp+1 bit#15-1)
+	bmi asstart	;yes
+	lda msal,x	;no - first in last out
+	sec	     	;no borrow
+	sbc #$3f	;normalize
+	ldy #5	  	;set for 5 shift rights
+
+ashftmn:lsr
+	ror hulp+1	;left mnemonic
+	ror hulp	;right mnemonic
+	dey	     	;done 5 shifts?
+	bne ashftmn	;no-loop
+	beq asnxmch	;always
+
+aserr:	jmp error
+
+asstart:ldx #$02	;move output buffer index past crunched mnemonic
+
+le447:  lda count	;after first number copy everything else to output buffer
 	bne le47c
-	jsr le7ce
-	beq le47a
-	bcs le442
-	lda #$24
-	sta hulp,x
+	jsr eval	;evaluate next parameter, if number crunch it
+	beq le47a	;...branch if not a number
+	bcs aserr	;...branch if illegal number
+
+	lda #'$'
+	sta hulp,x	;buffer a number, either '$00' or '$0000'
 	inx
 	lda t0+2
-	bne le442
-	ldy #$04
-	lda shift
-	cmp #$08
-	bcc le46b
+	bne aserr	;...branch if number too large
+	ldy #4
+	lda shift	;kludge to allow user to force absolute over zero page
+	cmp #8
+	bcc le46b	;...allow only hex or octal bases to force absolute
 	cpy count
-	beq le471
+	beq le471	;...branch to force absolute	
 le46b:  lda t0+1
-	bne le471
-	ldy #$02
-le471:  lda #$30
+	bne le471	;...branch if 2-byte field
+	ldy #2		;else set up  1-byte field
+
+le471:  lda #'0'
 le473:  sta hulp,x
 	inx
 	dey
 	bne le473
-le47a:  dec txtptr
-le47c:  jsr gnc
-	beq le48f
+
+le47a:  dec txtptr	;re-get last character from input buffer
+le47c:  jsr gnc		;copy rest of input buffer to output buffer
+	beq le48f	;...branch if eol
 	cmp #$20
-	beq le447
-	sta hulp,x
+	beq le447	;...squish out spaces
+	sta hulp,x	;hopefully it's of one of these:   #,()
 	inx
-	cpx #$0a
-	bcc le447
-	bcs le442
-le48f:  stx t1
-	ldx #$00
-	stx wrap
-le496:  ldx #$00
-	stx fa
-	lda wrap
-	jsr le659
-	ldx format
+	cpx #10
+	bcc le447	;...loop until eol or
+	bcs aserr	;...buffer overflow
+
+le48f:  stx t1		;save input # of characters
+	ldx #0
+	stx wrap	;start trial at zero
+
+as110:  ldx #$00
+	stx fa		;disa index=0
+	lda wrap	;get trial byte
+	jsr dset	;digest it
+	ldx format	;save format for later
 	stx t1+1
-	tax
-	lda $e761,x
-	jsr le57f
-	lda $e721,x
-	jsr le57f
-	ldx #$06
-le4b4:  cpx #$03
-	bne le4cc
+	tax	     	;index into mnemonic table
+	lda mnemr,x	;get compressed
+	jsr tstrx	;mnemonic and test
+	lda mneml,x
+	jsr tstrx
+	ldx #6	  	;six format bits
+
+as210:  cpx #3
+	bne as230
 	ldy length
-	beq le4cc
-le4bd:  lda format
-	cmp #$e8
-	lda #$30
-	bcs le4e4
-	jsr le57c
+	beq as230	;skip-single byte instr
+
+as220:  lda format
+	cmp #$e8	;a relative instr?
+	lda #'0'	;test zeros
+	bcs as250	;no-3 byte
+	jsr tst2	;test a byte,2 chars
 	dey
-	bne le4bd
-le4cc:  asl format
-	bcc le4df
-	lda $e714,x
-	jsr le57f
-	lda $e71a,x
-	beq le4df
-	jsr le57f
-le4df:  dex
-	bne le4b4
-	beq le4ea
-le4e4:  jsr le57c
-	jsr le57c
-le4ea:  lda t1
+	bne as220
+
+as230:  asl format
+	bcc as240
+	lda char1-1,x
+	jsr tstrx	;test syntax
+	lda char2-1,x
+	beq as240
+	jsr tstrx	;test more syntax
+
+as240:  dex
+	bne as210
+	beq as300
+
+as250:  jsr tst2	;test a word,4 chars
+	jsr tst2
+as300:  lda t1	  	;check # chars of both
 	cmp fa
-	beq le4f3
-	jmp le58b
-le4f3:  ldy length
-	beq le52a
-	lda t1+1
-	cmp #$9d
-	bne le521
-	lda t0
-	sbc t2
-	tax
+	beq as310	;match, skip
+	jmp tst05	;fail
+
+as310:  ldy length
+	beq as500	;if only 1 byte instr skip
+	lda t1+1	;get saved format
+	cmp #$9d	;a relative instr?
+	bne as400	;no-skip
+
+	lda t0	  	;calculate a relative
+	sbc t2	  	;(.c=1 already)
+	tax		;save 'diff'
 	lda t0+1
 	sbc t2+1
-	bcc le511
-	bne le579
+	bcc as320	;...taken if a negative branch
+
+	bne aerr	;positive branch, out of range
 	cpx #$82
-	bcs le579
-	bcc le519
-le511:  tay
-	iny
-	bne le579
+	bcs aerr
+	bcc as340
+
+as320	tay		;negative branch
+	iny	     	;out of range, y=$ff
+	bne aerr
 	cpx #$82
-	bcc le579
-le519:  dex
+	bcc aerr
+as340:  dex	     	;subtract 2 from 'diff' for instr
 	dex
 	txa
-	ldy length
-	bne le524
-le521:  lda $005f,y
-le524:  jsr stash
-	dey
-	bne le521
-le52a:  lda wrap
+	ldy length	;set index to length
+	bne as420	;branch always
+
+as400
+	lda t0-1,y      ;no-put byte out there
+as420
 	jsr stash
-	jsr le8ad
-	jsr primm
+	dey
+	bne as400
+
+as500: 	lda wrap	;get good op code
+	jsr stash
+	jsr cronly	;get ready to overstrike line
+	jsr primm	;print 'A ' & erase eol
 	!pet "a ", esc, "q", 0
-	jsr le5dc
+	jsr dis400	;disassemble one line
+
 	inc length
 	lda length
-	jsr addt2
-	lda #$41
-	sta keyd
-	lda #$20
-	sta $034b
-	sta $0351
-	lda t2+2
+	jsr addt2	;update address
+
+	lda #'a'	;set up next line with 'a bnnnn ' for convenience
+	sta keyd	;put it in the keyboard buffer
+	lda #' '
+	sta keyd+1
+	sta keyd+7
+	lda t2+2	;get the bank number
+	jsr makhex	;get hi byte in .a (which we'll ignore), and lo in .x
+	stx keyd+2
+	lda t2+1	;next get mid byte of address
 	jsr makhex
-	stx $034c
-	lda t2+1
+	sta keyd+3	;..and put in buffer,
+	stx keyd+4
+	lda t2		;then get the low byte of address,
 	jsr makhex
-	sta $034d
-	stx $034e
-	lda t2
-	jsr makhex
-	sta $034f
-	stx $0350
-	jsr leb87
+	sta keyd+5	;..and put that in the buffer, too.
+	stx keyd+6
+	jsr leb87		; *******signal that we put 8 char's in the buffer
 	nop
 	jmp main
-le579:  jmp error
-le57c:  jsr le57f
-le57f:  stx sxreg
+
+
+aerr:	jmp error
+;  test char in .a with char in hulp
+;
+tst2:  jsr tstrx
+tstrx:  stx sxreg
 	ldx fa
 	cmp hulp,x
 	beq le593
 	pla
 	pla
-le58b:  inc wrap
-	beq le579
-	jmp le496
+tst05:  inc wrap
+	beq aerr
+	jmp as110
 le593:  inc fa
 	ldx sxreg
 	rts
@@ -930,11 +972,11 @@ le5d1:  jmp error
 le5d4:  lda #$2e
 	jsr bsout
 	jsr putspc
-le5dc:  jsr putt2
+dis400:  jsr putt2
 	jsr putspc
 	ldy #$00
 	jsr fetch
-	jsr le659
+	jsr dset
 	pha
 	ldx length
 	inx
@@ -989,7 +1031,7 @@ le653:  adc t2
 	bcc le658
 	inx
 le658:  rts
-le659:  tay
+dset:  tay
 	lsr
 	bcc le668
 	lsr
@@ -1114,116 +1156,154 @@ mnemr
 regk
 	!byte cr,$20,$20,$20
 
-pargot:	dec txtptr
-parse:  jsr le7ce
-	bcs le7c2
-	jsr le8e7
-	bne le7ba
+;  parse entry when 1st character has already been read
+pargot:
 	dec txtptr
+
+;  parse next item in buffer & put its value into  t0, t0+1 & t0+2.
+;
+;	.z=1 if no value found.
+;	.c=1 if eol.
+;	.x & .y are preserved, .a contains # digits read.
+;
+;	if error, call is popped & 'jmp error' performed.
+; $e7a8
+parse:  jsr eval	;evaluate ascii input as a number
+	bcs parserr	;...branch if error
+	jsr glc		;re-get last character
+	bne parckdl	;...branch if not eol
+	dec txtptr	;point to eol: make next 'gnc' see eol
 	lda count
-	bne le7c9
-	beq le7c7
-le7ba:  cmp #$20
-	beq le7c9
-	cmp #$2c
-	beq le7c9
-le7c2:  pla
+	bne parok	;...valid number input, treat eol as a delimiter
+	beq pareol	;...the well is very dry
+
+parckdl	cmp #' '	;parse delimiters (only allow <space> or <comma>)
+	beq parok
+	cmp #','
+	beq parok	;...fall into error if bad delimiter
+
+parserr:pla		;pop this call
 	pla
 	jmp error
-le7c7:  sec
+
+pareol:	sec		;set .c=1 for eol
 	!byte $24	; skip next
-le7c9:	clc
-	lda count
+
+parok:	clc		;clear .c for not-eol
+	lda count	;set .z=1 for valid number
 	rts
-le7ce:  lda #$00
-	sta t0
+
+;  evaluate next item in buffer & put its value into  t0, t0+1 & t0+2.
+;
+;	.c=0  normal return
+;	.c=1  error  return
+;	.z=1  null input
+;	.x & .y are preserved.
+; $e7cf
+eval:	lda #$00
+	sta t0		;clear value
 	sta t0+1
 	sta t0+2
-	sta count
+	sta count	;reset digit counter (flags valid number vs. null input)
 	txa
-	pha
+	pha		;preserve .x & .y
 	tya
 	pha
-le7dd:  jsr gnc
+
+le7dd:  jsr gnc		;get next character
 	bne le7e5
-	jmp le87e
+	jmp eval_ok	;...branch if end of line
 le7e5:  cmp #$20
 	beq le7dd
+
 	ldx #$03
 le7eb:  cmp cmdnum,x
 	beq le7f6
 	dex
 	bpl le7eb
+
 	inx
 	dec txtptr
+
 le7f6:  ldy bases,x
 	lda shifts,x
 	sta shift
-le7ff:  jsr gnc
-	beq le87e
+
+le7ff:  jsr gnc		;get next character
+	beq eval_ok	;...branch if eol
 	sec
-	sbc #$30
-	bcc le87e
-	cmp #$0a
-	bcc le813
-	sbc #$07
-	cmp #$10
-	bcs le87e
-le813:  sta number
+	sbc #'0'	;convert ascii digit to binary value
+	bcc eval_ok	;...branch if not a number  (assume delimiter)
+	cmp #10
+	bcc le813		;...number 0-9
+	sbc #7
+	cmp #16		;...number a-f
+	bcs eval_ok	;...branch if not a number  (assume delimiter)
+
+le813:  sta number	;binary value of current digit
 	cpy number
-	bcc le87c
-	beq le87c
-	inc count
-	cpy #$0a
-	bne le82e
+	bcc eval_ng	;...branch if number out of range of given base
+	beq eval_ng
+	inc count	;flag valid digit
+	cpy #10
+	bne le82e	;...branch if not base-10
+
 	ldx #$02
-le826:  lda t0,x
+le826:  lda t0,x	;save a copy current total for base-10 calc
 	sta temps,x
 	dex
 	bpl le826
+
 le82e:  ldx shift
-le831:  asl t0
+le831:  asl t0		;multiply current value by base using binary shifts
 	rol t0+1
 	rol t0+2
-	bcs le87c
+	bcs eval_ng	;...branch if overflow error
 	dex
-	bne le831
-	cpy #$0a
-	bne le862
-	asl temps
-	rol $03b8
-	rol $03b9
-	bcs le87c
+	bne le831	;...next shift
+
+	cpy #10
+	bne le862	;...branch if not base-10
+
+	asl temps	;more base-10 calc: first one more shift
+	rol temps+1
+	rol temps+2
+	bcs eval_ng	;...overflow
 	lda temps
-	adc t0
+	adc t0		;add 'em up
 	sta t0
-	lda $03b8
+	lda temps+1
 	adc t0+1
 	sta t0+1
-	lda $03b9
+	lda temps+2
 	adc t0+2
 	sta t0+2
-	bcs le87c
-le862:  clc
+	bcs eval_ng	;...overflow
+
+le862:  clc		;add current digit (all bases)
 	lda number
 	adc t0
 	sta t0
-	txa
+	txa		;.x=0
 	adc t0+1
 	sta t0+1
 	txa
 	adc t0+2
 	sta t0+2
-	bcs le87c
+	bcs eval_ng	;...overflow
 	and #$f0
-	bne le87c
-	beq le7ff
-le87c:  sec
+	bne eval_ng	;...overflow
+	beq le7ff	;...next character
+
+eval_ng:
+	sec
 	!byte $24	; skip next
-le87e:	clc
-	sty shift
+
+eval_ok:
+	clc
+	sty shift	;return input base (used by 'assem')
 	pla
-	tay
+	tay		;restore .x & .y
 	pla
 	tax
 	lda count
@@ -1233,68 +1313,86 @@ bases:	!byte 16,10, 8, 2
 shifts:	!byte  4, 3, 3, 1
 
 ; $8892 print t2 as 5 hex digits:	BHHLL
-putt2:	lda t2+2
-	jsr makhex
+putt2:	lda t2+2	;get bank (a19-a16)
+	jsr makhex	;make ascii:  msd in .a (ignored) and lsd in .x
 	txa
-	jsr bsout
-	lda t2
+	jsr bsout	;print lsd
+	lda t2		;get address (a15-a0)
 	ldx t2+1
 
-le89f:  pha
+le89f:  pha		;print address:  msb first, then lsb
 	txa
 	jsr puthex
 	pla
-puthxs:  jsr puthex
-putspc:  lda #$20
+
+puthxs:	jsr puthex	;print byte in .a as two hex digits
+
+putspc:	lda #' '	;print <space>
 	jmp bsout
-le8ad:  jsr primm
+
+cronly:	jsr primm	;print <cr><crsr-up>
 	!pet cr, $91, 0
 	rts
-crlf:  lda #$0d
+
+crlf:	lda #$0d
 	jmp bsout
-le8b9:  jsr primm
+
+new_line:
+	jsr primm	;print <cr><clear_eol><space>
 	!pet cr, esc, "q ", 0
 	rts
-puthex:  stx sxreg
+
+puthex:	stx sxreg
 	jsr makhex
 	jsr bsout
 	txa
 	ldx sxreg
 	jmp bsout
-makhex:  pha
-	jsr le8dc
-	tax
+
+; $e8d2 convert .a to 2 hex digits & put msb in .a, lsb in .x
+makhex:	pha
+	jsr maknib	; convert nibble
+	tax		; move low nibble to .x
 	pla
+	lsr		; sift high nibble right and convert it to .a
 	lsr
 	lsr
 	lsr
-	lsr
-le8dc:  and #$0f
+
+maknib:	and #$0f
 	cmp #$0a
-	bcc le8e4
-	adc #$06
-le8e4:  adc #$30
+	bcc mak0_9	; number 0-9
+	adc #$06	; add 6+carry=7 for 'a-f
+
+mak0_9	adc #'0'	; add petscii '0'
 	rts
-le8e7:  dec txtptr
-gnc:  stx sxreg
+
+; $e8e7 get last character
+glc:	dec txtptr
+
+; $e8e9 get next character: return in .a  (return = if buffer empty or eol)
+gnc:	stx sxreg
 	ldx txtptr
 	lda buf,x
-	beq le8f9
-	cmp #$3a
-	beq le8f9
-	cmp #$3f
-le8f9:  php
+	beq gnceol	;eol-return with z=1
+	cmp #':'
+	beq gnceol	;eol-return with z=1
+	cmp #'?'
+gnceol:	php
 	inc txtptr
 	ldx sxreg
 	plp
 	rts
-t0tot2:  lda t0
+
+;  move t0,t0+1,t0+2 to t2,t2+1,t2+2
+t0tot2: lda t0
 	sta t2
 	lda t0+1
 	sta t2+1
 	lda t0+2
 	sta t2+2
 	rts
+
 sub0m2:  sec
 	lda t0
 	sbc t2
@@ -1381,7 +1479,7 @@ range:  bcs +
 +	sec
 	rts
 convert:  jsr pargot
-	jsr le8b9
+	jsr new_line
 	lda #$24
 	jsr bsout
 	lda t0+2
@@ -1392,7 +1490,7 @@ convert:  jsr pargot
 le9c7:  lda t0
 	ldx t0+1
 	jsr le89f
-	jsr le8b9
+	jsr new_line
 	lda #$2b
 	jsr bsout
 	jsr lea07
@@ -1400,14 +1498,14 @@ le9c7:  lda t0
 	ldx #$08
 	ldy #$03
 	jsr lea5d
-	jsr le8b9
+	jsr new_line
 	lda #$26
 	jsr bsout
 	lda #$00
 	ldx #$08
 	ldy #$02
 	jsr lea47
-	jsr le8b9
+	jsr new_line
 	lda #$25
 	jsr bsout
 	lda #$00
