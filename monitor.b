@@ -2,6 +2,7 @@
 ; MONITOR.PRG
 ; comments+labels vossi 05/2020
 ; P500 patches vossi 05/2020
+; fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d
 !cpu 6502
 !ct pet
 ; switches
@@ -15,6 +16,7 @@
 	!initmem $ff
 }
 ; constants
+irom	= $f		; System bank
 cr	= $0d
 esc	= $1b
 ; -------------------------------------------------------------------------------------------------
@@ -30,6 +32,7 @@ xr	= $07
 yr	= $08
 sp	= $09
 
+ptr	= $5d		;2bytes pointer
 temp	= $5f		;use basic fac for monitor zp
 
 t0	= $60		;three pointer
@@ -38,18 +41,20 @@ t2	= $66
 
 txtptr	= $7a
 
-;fa	= $ba		;kernal definitions
-;fnadr	= $bb
-fnlen	= $b7
+fa	= $9f		;kernal definitions
+fnadr	= $90
+fnlen	= $9d
 mode	= $d7
-msgflg	= $9d
+;msgflg	= 
 ndx	= $d0
-;sa	= $b9
-status	= $90
-tmpc	= $9f
+sa	= $a0
+;status	= $90
+;tmpc
 verck	= $93
 ;ba	= $c6
 ;fnbnk	= $c7
+fsadr	= $99		; 3bytes file start address
+feadr	= $96		; 3bytes file end address
 
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
@@ -301,10 +306,10 @@ stash:	jsr ++
 	rts
 
 le13b:	ldx i6509
-	lda #$0f
+	lda #irom
 	sta i6509
 	ldy #$9c
-	lda ($5d),y
+	lda (ptr),y
 	stx i6509
 	rts
 ;********************************************
@@ -621,78 +626,84 @@ hunerr:	jmp error
 ;************************************************************
 ; $e337
 lodsav:
-	jsr lebae
-le33a:  jsr gnc
-	beq le3a3
-	cmp #$20
-	beq le33a
-	cmp #$22
-	bne le35c
+	jsr lsinit	; init defaults
+lsspc:  jsr gnc		;look for name
+	beq lsload	;branch if no name (must be default load)
+	cmp #' '
+	beq lsspc	;skip spaces
+	cmp #$22	;quote
+	bne lserr	;jmp to error if no quoted name
 	ldx txtptr
-le349:  lda buf,x
-	beq le3a3
+
+lsnxchr:lda buf,x	;get chr
+	beq lsload	;eol, must be load
 	inx
-	cmp #$22
-	beq le35f
-	sta ($90),y
-	inc msgflg
+	cmp #$22	;pass everything up to closing quote
+	beq lsgo
+	sta (fnadr),y	;okay- always bank 0
+	inc fnlen
 	iny
-	cpy #$11
-	bcc le349
-le35c:  jmp error
-le35f:  stx txtptr
-	jsr gnc
-	beq le3a3
-	jsr parse
-	bcs le3a3
+	cpy #17		;check length of name (16 max.)
+	bcc lsnxchr
+lserr:  jmp error
+
+lsgo:	stx txtptr
+	jsr gnc		;trash delimitor
+	beq lsload	;...eol, use default
+	jsr parse	;get device #
+	bcs lsload	;...eol, use default
 	lda t0
-	sta $9f
-	jsr parse
-	bcs le3a3
-	jsr t0tot2
-	jsr parse
-	bcs le3a9
-	jsr crlf
+	sta fa		;device # in 'fa' (let kernal catch invalid devices)
+	jsr parse	;get starting address
+	bcs lsload	;none, must be load
+	jsr t0tot2	;save start_addr in t2
+
+	jsr parse	;get ending address
+	bcs loadadr	;none...must be 'alternate load'
+	jsr crlf	;prep for 'saving...' msg
 	lda verck
-	cmp #$53
-	bne le35c
-	lda #$00
-	sta $a0
+	cmp #'s'	;check that this is a save
+	bne lserr
+	lda #0
+	sta sa
 	ldx #$02
-le38b:  lda t2,x
-	sta $99,x
+lsadrcp:lda t2,x
+	sta fsadr,x	; copy start adr kernal pointer
 	lda t0,x
-	sta $96,x
+	sta feadr,x	; copy end adr to kernal pointer
 	dex
-	bpl le38b
-	jsr lebca
-	ldx #$99
-	ldy #$96
-	jsr $ffd8
+	bpl lsadrcp
+	jsr fparcpy	; copy file parameter to system bank
+	ldx #fsadr	; load parameter address for kernal routine
+	ldy #feadr
+	jsr _save	;do save
 	jmp main
-le3a3:  ldx #$ff
-	stx t2
+
+lsload: ldx #$ff
+	stx t2		;load to saved address
 	stx t2+1
-le3a9:  lda #$00
-	sta $a0
-	jsr lebca
-	lda verck
-	cmp #$56
-	beq +
-	cmp #$4c
-	bne le35c
-	lda #$00
-	!byte $2c	; skip next
-+	lda #$80
-	ldx t2
+loadadr:lda #$00	;flag 'non-default load'
+	sta sa
+	jsr fparcpy	;copy file parameter to system bank
+
+	lda verck	;check for load
+	cmp #'v'	;..or verify
+	beq verify
+	cmp #'l'
+	bne lserr
+	lda #0		;flag load
+	!byte $2c	;skip next
+verify	lda #$80	;flag for verify
+	ldx t2		;set up new address for load (bank already put in 'ba')
 	ldy t2+1
 	ora t2+2
-	jsr $ffd5
+	jsr _load	;do load/verify
 	jmp lebed
-
-	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-
+;******************************************************************
+;	Fill command - F starting-address ending-address value
+;******************************************************************
+*= $e3db
+; $e3db
 fill:
 	jsr range
 	bcs le403
@@ -781,7 +792,7 @@ le48f:  stx t1
 	ldx #$00
 	stx wrap
 le496:  ldx #$00
-	stx $9f
+	stx fa
 	lda wrap
 	jsr le659
 	ldx format
@@ -816,7 +827,7 @@ le4df:  dex
 le4e4:  jsr le57c
 	jsr le57c
 le4ea:  lda t1
-	cmp $9f
+	cmp fa
 	beq le4f3
 	jmp le58b
 le4f3:  ldy length
@@ -879,7 +890,7 @@ le52a:  lda wrap
 le579:  jmp error
 le57c:  jsr le57f
 le57f:  stx sxreg
-	ldx $9f
+	ldx fa
 	cmp hulp,x
 	beq le593
 	pla
@@ -887,7 +898,7 @@ le57f:  stx sxreg
 le58b:  inc wrap
 	beq le579
 	jmp le496
-le593:  inc $9f
+le593:  inc fa
 	ldx sxreg
 	rts
 
@@ -1512,7 +1523,7 @@ leae4:  jsr basin
 	jsr bsout
 	cmp #$0d
 	beq leaf4
-	lda status
+	lda fnadr
 	and #$bf
 	beq leae4
 leaf4:  jsr $ffcc
@@ -1545,11 +1556,11 @@ leb08:  iny
 leb2f:  sty t1
 leb31:  jsr basin
 	sta t0
-	lda status
+	lda fnadr
 	bne leaf4
 	jsr basin
 	sta t0+1
-	lda status
+	lda fnadr
 	bne leaf4
 	dec t1
 	bne leb31
@@ -1562,7 +1573,7 @@ leb31:  jsr basin
 	jsr bsout
 leb58:  jsr basin
 	beq leb66
-	ldx status
+	ldx fnadr
 	bne leaf4
 	jsr bsout
 	bcc leb58
@@ -1591,58 +1602,63 @@ setmod:
 }
 *= $eb87
 leb87:  lda #$ab
-	sta $5d
+	sta ptr
 	lda #$03
-	sta $5e
+	sta ptr+1
 	ldx i6509
-	lda #$0f
+	lda #irom
 	sta i6509
 	ldy #$07
 leb97:  lda keyd,y
-	sta ($5d),y
+	sta (ptr),y
 	dey
 	bpl leb97
 	lda #$d1
-	sta $5d
+	sta ptr
 	ldy #$00
-	sty $5e
+	sty ptr+1
 	lda #$08
-	sta ($5d),y
+	sta (ptr),y
 	stx i6509
 	rts
-lebae:  ldy #$01
-	sty tmpc
-	sty $a0
-	dey
+; $ebae	setp load/save
+lsinit:	
+	ldy #$01
+	sty fa		;setup defaults: tape, fixed_load, no filename
+	sty sa
+	dey		;(.y=0)
 	sty $98
 	sty $9b
 	sty $9c
-	sty msgflg
+	sty fnlen
 	lda #$80
-	sta status
+	sta fnadr
 	lda #$03
 	sta $91
 	lda $00
 	sta $92
 	rts
-lebca:  ldx i6509
-	lda #$0f
-	sta i6509
+; $ebca copy file patameter for kernal routine to system bank
+fparcpy:
+	ldx i6509
+	lda #irom
+	sta i6509	; switch to system bank
 	lda #$00
-	sta $5d
-	sta $5e
+	sta ptr		; init pointer
+	sta ptr+1
 	ldy #$a0
-lebd8:  lda $0000,y
-	sta ($5d),y
+fparlp:  lda $0000,y
+	sta (ptr),y	; copy file specs
 	dey
 	cpy #$95
-	bne lebe6
+	bne +
 	ldy #$92
-	bne lebd8
-lebe6:  cpy #$8f
-	bne lebd8
-	stx i6509
+	bne fparlp
++	cpy #$8f
+	bne fparlp
+	stx i6509	; restore ibank
 	rts
+; $ebed
 lebed:  jsr le13b
 	and #$10
 	bne lebff
