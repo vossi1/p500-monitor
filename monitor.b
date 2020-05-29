@@ -23,8 +23,8 @@ esc	= $1b
 ; zero page stuff
 i6509	= $01		; 6509 indirect bank reg
 
-pcb	= $02
-pch	= $03		;in basic's area
+pcb	= $02		;in basic's area
+pch	= $03
 pcl	= $04
 flgs	= $05
 acc	= $06
@@ -35,39 +35,39 @@ sp	= $09
 ptr	= $5d		;2bytes pointer
 temp	= $5f		;use basic fac for monitor zp
 
-t0	= $60		;three pointer
-t1	= $63
-t2	= $66
+t0	= $60		;3by pointer
+t1	= $63		;3by pointer
+t2	= $66		;3by pointer
 
 txtptr	= $7a
 
-fa	= $9f		;kernal definitions
-fnadr	= $90
-fnlen	= $9d
-mode	= $d7
-;msgflg	= 
-ndx	= $d0
-sa	= $a0
-;status	= $90
-;tmpc
-verck	= $93
-;ba	= $c6
-;fnbnk	= $c7
-fsadr	= $99		; 3bytes file start address
-feadr	= $96		; 3bytes file end address
+;kernal definitions
+fnadr	= $90		;3by Address of file name string
+			;  low, high, bank
+eal	= $96		;3by End of load/save
+eah	= $97		;  low, high, bank
+eas	= $98
+stal	= $99		;3by Start of load/save
+stah	= $9a		;  low, high, bank
+stas	= $9b
+status	= $9c		;I/O operation status
+fnlen	= $9d		;File name length
+fa	= $9f		;Current first address
+sa	= $a0		;Current secondary address
+
+verck	= $93		;verify flag
+mode	= $d7		;40/80 column mode
 
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
 
-bad	= $100		;fbuffr
-buf	= $200		;input buffer
-keyd	= $34a		;keyboard buffer
-
-;exmon	= $32e		;indirect to command parser
+bad	= $0100		;fbuffr
+buf	= $0200		;input buffer
 
 stavec	= $2af+10	;'stash' indirect
 cmpvec	= $2be+10	;'cmpare' indirect
 
+keyd	= $034a		;keyboard buffer
 xcnt	= $0380		;compare buffer
 hulp	= $03a0
 format	= $03aa
@@ -83,22 +83,24 @@ shift	= $03b6		;parse number conversion
 temps	= $03b7
 ; -------------------------------------------------------------------------------------------------
 ; system entrys
+primm	= $ff3f		;print message routine
 
-basin	= $ffcf		;kernal jump table
-bsout	= $ffd2
-chkin	= $ffc6
-chkout	= $ffc9
-close	= $ffc3
-clrch	= $ffcc
-open	= $ffc0
+exsub3	= $feb5		;kernal cross bank call
+
+setbnk	= $ff68		;kernal jump table
+_setmsg	= $ff90
 setlfs	= $ffba
 setnam	= $ffbd
-setbnk	= $ff68
-stop	= $ffe1
+open	= $ffc0
+close	= $ffc3
+chkin	= $ffc6
+chkout	= $ffc9
+clrch	= $ffcc
+basin	= $ffcf
+bsout	= $ffd2
 _load	= $ffd5
 _save	= $ffd8
-primm	= $ff3f
-_setmsg	= $ff90
+stop	= $ffe1
 
 hw_irq	= $fffe
 ; -------------------------------------------------------------------------------------------------
@@ -308,7 +310,7 @@ stash:	jsr ++
 le13b:	ldx i6509
 	lda #irom
 	sta i6509
-	ldy #$9c
+	ldy #status
 	lda (ptr),y
 	stx i6509
 	rts
@@ -668,14 +670,14 @@ lsgo:	stx txtptr
 	sta sa
 	ldx #$02
 lsadrcp:lda t2,x
-	sta fsadr,x	; copy start adr kernal pointer
+	sta stal,x	; copy start adr kernal pointer
 	lda t0,x
-	sta feadr,x	; copy end adr to kernal pointer
+	sta eal,x	; copy end adr to kernal pointer
 	dex
 	bpl lsadrcp
 	jsr fparcpy	; copy file parameter to system bank
-	ldx #fsadr	; load parameter address for kernal routine
-	ldy #feadr
+	ldx #stal	; load parameter address for kernal routine
+	ldy #eal
 	jsr _save	;do save
 	jmp main
 
@@ -715,7 +717,7 @@ fill:
 	ldy #$00
 le3ee:  lda t0
 	jsr stash
-	jsr $ffe1
+	jsr stop
 	beq le400
 	jsr inct2
 	jsr dect1
@@ -914,7 +916,7 @@ le5a9:  jsr sub0m2
 	bcc le5d1
 le5ae:  jsr primm
 	!pet cr, esc, "q", 0
-	jsr $ffe1
+	jsr stop
 	beq le5ce
 	jsr le5d4
 	inc length
@@ -1494,7 +1496,7 @@ disk:
 	sta t0+2
 	sta fnlen
 	tax
-	jsr $ff68
+	jsr setbnk
 	jsr gnc
 	dec txtptr
 	cmp #$24
@@ -1502,11 +1504,11 @@ disk:
 	lda #$00
 	ldx t0
 	ldy #$0f
-	jsr $ffba
-	jsr $ffc0
+	jsr setlfs
+	jsr open
 	bcs leaf4
 	ldx #$00
-	jsr $ffc9
+	jsr chkout
 	bcs leaf4
 leac9:  ldx txtptr
 	inc txtptr
@@ -1514,10 +1516,10 @@ leac9:  ldx txtptr
 	beq lead7
 	jsr bsout
 	bcc leac9
-lead7:  jsr $ffcc
+lead7:  jsr clrch
 	jsr crlf
 	ldx #$00
-	jsr $ffc6
+	jsr chkin
 	bcs leaf4
 leae4:  jsr basin
 	jsr bsout
@@ -1526,10 +1528,10 @@ leae4:  jsr basin
 	lda fnadr
 	and #$bf
 	beq leae4
-leaf4:  jsr $ffcc
+leaf4:  jsr clrch
 	lda #$00
 	sec
-	jsr $ffc3
+	jsr close
 	jmp main
 leb00:  jmp error
 leb03:  ldy #$ff
@@ -1542,15 +1544,15 @@ leb08:  iny
 	tya
 	ldx txtptr
 	ldy #$02
-	jsr $ffbd
+	jsr setnam
 	lda #$00
 	ldx t0
 	ldy #t0
-	jsr $ffba
-	jsr $ffc0
+	jsr setlfs
+	jsr open
 	bcs leaf4
 	ldx #$00
-	jsr $ffc6
+	jsr chkin
 	jsr crlf
 	ldy #$03
 leb2f:  sty t1
@@ -1578,7 +1580,7 @@ leb58:  jsr basin
 	jsr bsout
 	bcc leb58
 leb66:  jsr crlf
-	jsr $ffe1
+	jsr stop
 	beq leaf4
 	ldy #$02
 	bne leb2f
@@ -1627,16 +1629,16 @@ lsinit:
 	sty fa		;setup defaults: tape, fixed_load, no filename
 	sty sa
 	dey		;(.y=0)
-	sty $98
-	sty $9b
-	sty $9c
+	sty eas
+	sty stas
+	sty status
 	sty fnlen
 	lda #$80
 	sta fnadr
 	lda #$03
-	sta $91
+	sta fnadr+1
 	lda $00
-	sta $92
+	sta fnadr+2
 	rts
 ; $ebca copy file patameter for kernal routine to system bank
 fparcpy:
@@ -1647,8 +1649,8 @@ fparcpy:
 	sta ptr		; init pointer
 	sta ptr+1
 	ldy #$a0
-fparlp:  lda $0000,y
-	sta (ptr),y	; copy file specs
+fparlp:	lda $0000,y
+	sta (ptr),y	; copy file parm $90-$92, $96-$a0
 	dey
 	cpy #$95
 	bne +
@@ -1698,7 +1700,7 @@ lec1b:  sei
 	ldx xr
 	ldy yr
 	pha
-	jmp $feb5
+	jmp exsub3
 lec3a:  lda #$e0
 	pha
 	!byte $a9	;lda #$8a
