@@ -213,14 +213,14 @@ exgby:	tsx
 ; -------------------------------------------------------------------------------------------------
 	nop			; returns here if rti
 ; FF06 Return from call to foreign bank
-excrts: php			; P
-	php			; P
+excrts: php			; .p
+	php			; .p
 	sei             	; dis ints
-	pha			; A
+	pha			; .a
 	txa
-	pha			; X
+	pha			; .x
 	tya
-	pha			; Y
+	pha			; .y
 	tsx
 	lda stack+6,x		; sp +6 is return seg
 	sta i6509		; restore i6509 to return seg
@@ -232,28 +232,28 @@ ipinit: ldy #$01
 	sty ipoint+1
 	dey
 	sty ipoint		; ipoint=$0100
-	dey			; Y=$ff
+	dey			; .y=$ff
 	lda (ipoint),y		; load stack pointer from $001ff
 	rts
 ; -------------------------------------------------------------------------------------------------
 ; FF24 Place X/A to ipoint (build stack in foreign bank)
-putaxs: pha			; save A
+putaxs: pha			; save .a
 	txa
-	sta (ipoint),y		; X hi
+	sta (ipoint),y		; .x hi
 	dey
 	pla
 ; FF2A Place A to ipoint (build stack in foreign bank)
-putas:  sta (ipoint),y		; A lo
+putas:  sta (ipoint),y		; .a lo
 	dey
 	rts
 ; -------------------------------------------------------------------------------------------------
 ; FF2E Pull registers after calling subroutine in foreign bank
 expull: pla
-	tay			; Y
+	tay			; .y
 	pla
-	tax			; X
-	pla			; A
-	plp			; P
+	tax			; .x
+	pla			; .a
+	plp			; .p
 	rts
 ;
 excrt2=excrts-1
@@ -265,7 +265,7 @@ exnmi:	php
 	pha
 	lda #irom
 	sta i6509
-	jmp exsub3		; 3bytes later entry to exsub
+	jmp exsub3		; 3 bytes later entry to exsub
 ; -------------------------------------------------------------------------------------------------
 primm:	jmp iprimm
 	jmp $0000
