@@ -5,7 +5,7 @@
 !cpu 6502
 !ct pet
 ; switches
-P500	= 1
+;P500	= 1
 
 !ifdef P500{
 	!to "monitor500.prg", cbm
@@ -19,6 +19,8 @@ cr	= $0d
 esc	= $1b
 ; -------------------------------------------------------------------------------------------------
 ; zero page stuff
+i6509	= $01		; 6509 indirect bank reg
+
 pcb	= $02
 pch	= $03		;in basic's area
 pcl	= $04
@@ -28,11 +30,11 @@ xr	= $07
 yr	= $08
 sp	= $09
 
-	* = $60		;use basic fac for monitor zp
+temp	= $5f		;use basic fac for monitor zp
 
-t0	*=*+3
-t1	*=*+3
-t2	*=*+3
+t0	= $60		;three pointer
+t1	= $63
+t2	= $66
 
 txtptr	= $7a
 
@@ -72,11 +74,11 @@ sxreg	*=*+1		;1 byte temp used all over
 syreg	*=*+1		;1 byte temp used all over
 wrap	*=*+1		;1 byte temp for assembler
 xsave	*=*+1		;save .x here during indirect subroutine calls
-direction *=*+1		;direction indicator for 'transfer'
+direction	= $03b3	;direction indicator for 'transfer'
 count	*=*+1		;parse number conversion
 number	*=*+1		;parse number conversion
 shift	*=*+1		;parse number conversion
-temps
+temps		= $03b7
 ; -------------------------------------------------------------------------------------------------
 ; system entrys
 
@@ -94,11 +96,6 @@ stop	= $ffe1
 _load	= $ffd5
 _save	= $ffd8
 primm	= $ff3f
-_fetch	= $ff74
-_stash	= $ff77
-_cmpar	= $ff7a
-_gosub	= $ff6e
-_goto	= $ff71
 _setmsg	= $ff90
 
 hw_irq	= $fffe
@@ -114,7 +111,7 @@ break:  		;////// entry for 'brk'
 	jsr primm
 	!pet cr, "break", 7, 0
 !ifndef P500{
-	nop
+	nop		; save 3 bytes for message "monitor500" ;)
 	nop
 	nop
 }
@@ -281,7 +278,7 @@ cmdtbl:
 	!word gosub-1
 	!word dspmem-1
 	!word dspreg-1
-	!word trnsfr
+	!word trnsfr-1
 	!word exit-1
 
 	!word disk-1
@@ -289,105 +286,129 @@ cmdtbl:
 	!word setmem-1
 	!word setreg-1
 ; $e11a
-le11a:	jsr $e12f
+fetch:	jsr ++
 	lda (t2),y
 	jmp +
-le122:	jsr le12f
+stash:	jsr ++
 	sta (t2),y
 +	ldx $30
-	stx $01
+	stx i6509
 	ldx $03b2
 	rts
 
-le12f:	stx $03b2
-	ldx $01
+++	stx $03b2
+	ldx i6509
 	stx $30
 	ldx t2+2
-	stx $01
+	stx i6509
 	rts
 
-le13b:	ldx $01
+le13b:	ldx i6509
 	lda #$0f
-	sta $01
+	sta i6509
 	ldy #$9c
 	lda ($5d),y
-	stx $01
+	stx i6509
 	rts
-	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 ;********************************************
 ;	Display memory command
 ;********************************************
+*= $e152
 ; $e152
 dspmem:
-	bcs +
-	jsr $e901
+	bcs dsp12l	;no range, do 1/2 screen
+	jsr t0tot2	;else move 'from' value into place
 	jsr parse
-	bcc ++
+	bcc dspcalc	;got 'to', go dump
 
-+	lda #$0b
+dsp12l:	lda #11	  	;do 12 lines
 	sta t0
-	bne le177
-++	jsr le90e
-	bcc le191
+	bne dspdump	;always
+
+; calculate # of lines
+dspcalc:jsr sub0m2	;calculate # bytes, put result in t0 (msb goes in .a)
+	bcc dsperr	;...branch if sa > ea
+
 	ldx #$03
-	bit mode
-	bpl le16e
+	bit mode	;divide by 8 if 40-col, 16 if 80-col
+	bpl dspshft
 	inx
-le16e:  lsr t0+2
-	ror t0+1
-	ror t0
+
+dspshft:lsr t0+2	;shift msb right,
+	ror t0+1	;..into middle byte,
+	ror t0		;..and finally into lsb
 	dex
-	bne le16e
-le177:  jsr $ffe1
-	beq le18e
-	jsr le1e8
+	bne dspshft
+
+dspdump:jsr stop	;is stop key down?
+	beq dspexit	;..if so, exit.
+
+	jsr dmpone
 	lda #$08
-	bit mode
-	bpl le186
+	bit mode	;add 8 (16 if 80-col) to line start address
+	bpl dsp40c
 	asl
-le186:  jsr le952
-	jsr le922
-	bcs le177
-le18e:  jmp main
-le191:  jmp error
+
+dsp40c	jsr addt2
+	jsr dect0	;test if dump finished
+	bcs dspdump	;loop until underflow
+dspexit:jmp main
+
+dsperr:	jmp error
+
+;********************************************
+;	Set register command
+;********************************************
 ; $e194
 setreg:
-	jsr le974
+	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
 	ldy #$00
-le199:  jsr parse
-	bcs le1a8
+-	jsr parse
+	bcs +		;quit anytime arg list is empty
 	lda t0
 	sta $0005,y
 	iny
 	cpy #$05
-	bcc le199
-le1a8:  jmp main
+	bcc -
++	jmp main
+;********************************************
+;	Alter memory command
+;********************************************
 ; $e1ab
 setmem:
-	bcs le1c9
-	jsr le901
-	ldy #$00
-le1b2:  jsr parse
-	bcs le1c9
-	lda t0
-	jsr le122
+	bcs +++		;...branch if no arguments- just regurgitate existing data
+	jsr t0tot2	;destination bank, addr in 't2'
+	ldy #0
+
+-	jsr parse	;scan for next argument
+	bcs +++		;...branch if eol
+	lda t0		;get the byte to stash
+	jsr stash	;stash it
 	iny
 	bit mode
-	bpl le1c5
-	cpy #$10
-	bcc le1b2
-le1c5:  cpy #$08
-	bcc le1b2
-le1c9:  jsr primm
+	bpl +
+	cpy #16
+	bcc -
++	cpy #8
+	bcc -
+
++++	jsr primm	;clear all modes & cursor up
 	!pet esc, "o", $91, 0
-	jsr le1e8
+
+	jsr dmpone
 	jmp main
+;********************************************************************
+;	Go command- start executing at either the supplied address,
+;	   or (default) the current contents of the PC reg
+;********************************************************************
 ; $e1d6
 go:
-	jsr le974
+	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
+
 	ldx sp
-	txs
-	jmp lec3d+1
+	txs		;set up stack pointer
+	jmp goto
+; gosub moved to the end
 	nop
 	nop
 	nop
@@ -397,116 +418,150 @@ go:
 	nop
 	nop
 	nop
-le1e8:  jsr crlf
-	lda #$3e
+;********************************************
+;	Subroutine to dump one line
+;	of memory on screen
+;********************************************
+; $e1e8
+dmpone:	
+	jsr crlf
+	lda #'>'	;print dump prompt
 	jsr bsout
-	jsr le892
-	ldy #$00
-	beq le1fa
-le1f7:  jsr le8a8
-le1fa:  jsr le11a
-	jsr puthex
+	jsr putt2	;print address, space.
+	ldy #0
+	beq dmpentr	;always (skip first space)
+
+dmpbylp:jsr putspc
+dmpentr:jsr fetch	;get a byte from memory
+	jsr puthex	;print hex byte
 	iny
-	cpy #$08
+	cpy #8		;8 bytes/line for 40-column mode
 	bit mode
-	bpl le209
-	cpy #$10
-le209:  bcc le1f7
-	jsr primm
+	bpl dmp40c
+	cpy #16		;16 bytes/line for 80-column mode
+dmp40c:	bcc dmpbylp
+
+	jsr primm	;block off ascii dump & turn rvs on
 	!pet ":", $12, 0
-	ldy #$00
-le213:  jsr le11a
+
+	ldy #0
+dmpchlp:jsr fetch	;re-get byte from memory
 	pha
-	and #$7f
+	and #$7f	;mask control characters ($00-$1f and $80-$9f)
 	cmp #$20
 	pla
-	bcs le220
-	lda #$2e
-le220:  jsr bsout
+	bcs dmpskct
+	lda #'.'	;print control characters as '.'
+
+dmpskct:jsr bsout
 	iny
 	bit mode
-	bpl le22c
-	cpy #$10
-	bcc le213
-le22c:  cpy #$08
-	bcc le213
+	bpl dmp40c2
+	cpy #16
+	bcc dmpchlp
+dmp40c2:cpy #8
+	bcc dmpchlp
 	rts
-
+;********************************************
+;	Transfer/Compare routines.
+;
+;	T starting-from,thru,to
+;	C starting-from,thru,with
+;********************************************
 compar:
-	lda #$00
+	lda #0	   	;flag 'compare'
+	!byte $2c	;Sskip next
 trnsfr:
-	bit $80a9
+	lda #$80	;flag 'transfer'
 	sta verck
 	lda #$00
-	sta $03b3
-	jsr le983
-	bcs le247
-	jsr parse
-	bcc le24a
-le247:  jmp error
-le24a:  bit verck
-	bpl le27a
-	sec
+	sta direction
+	jsr range	;get source in t2, length in t1
+	bcs trnerr
+	jsr parse	;get destination in t0
+	bcc trnok
+
+trnerr:	jmp error
+
+trnok:	bit verck
+	bpl trnnxln		;...branch if compare (direction crap unimportant)
+
+	sec		;determine direction of transfer (to avoid stepping on ourselves!)
 	lda t2
-	sbc t0
+	sbc t0		;source - destination (ignore banks...there might be bleed-thru)
 	lda t2+1
 	sbc t0+1
-	bcs le27a
-	lda t1
+	bcs trnnxln	;branch if source >= destination
+
+;	clc
+	lda t1		;source < destination,   must work from back to front
 	adc t0
 	sta t0
-	lda t1+1
+	lda t1+1	;add length to destination
 	adc t0+1
 	sta t0+1
 	lda t1+2
 	adc t0+2
 	sta t0+2
-	ldx #$02
-le26d:  lda $03b7,x
+	ldx #2
+trnsrc:	lda temps,x	;restore ea as source (saved @ 'range')
 	sta t2,x
 	dex
-	bpl le26d
-	lda #$80
-	sta $03b3
-le27a:  jsr crlf
-	ldy #$00
-le27f:  jsr $ffe1
-	beq le2cb
-	jsr le11a
-	sta $5f
-	ldx $01
-	lda t0+2
-	sta $01
-	lda (t0),y
-	bit verck
-	bpl le299
-	lda $5f
-	sta (t0),y
-le299:  stx $01
-	cmp $5f
-	nop
-	nop
-	beq le2aa
-	jsr le892
-	jsr le8a8
-	jsr le8a8
-le2aa:  bit $03b3
-	bmi le2ba
-	inc t0
-	bne le2c3
-	inc t0+1
-	bne le2c3
-	jmp error
-le2ba:  jsr le922
-	jsr le960
-	jmp le2c6
-le2c3:  jsr le950
-le2c6:  jsr le93c
-	bcs le27f
-le2cb:  jmp main
+	bpl trnsrc
 
+	lda #$80
+	sta direction	;flag backwards direction
+
+trnnxln:jsr crlf	;start with a new line
+	ldy #0
+
+trnlp:  jsr stop
+	beq trnx	;...branch if user requests abort
+	jsr fetch	;get a byte
+	sta temp
+	ldx i6509
+	lda t0+2	;get bank and switch to
+	sta i6509
+	lda (t0),y	;get byte
+	bit verck
+	bpl trncmp	;branch if no copy
+	lda temp
+	sta (t0),y	;copy byte
+trncmp:	stx i6509	;restore ibank
+	cmp temp	;compare
+	nop
+	nop
+	beq trnequ
+	jsr putt2	;report mismatch
+	jsr putspc	;make each number 8 bytes to look pretty
+	jsr putspc
+
+trnequ: bit direction
+	bmi trndir	;test direction of transfers
+
+	inc t0		;normal
+	bne trnnext
+	inc t0+1
+	bne trnnext	;bra
+	jmp error	;disallow bank-wrapping operations
+
+trndir:	jsr dect0	;backwards
+	jsr dect2
+	jmp trnback
+
+trnnext:jsr inct2
+trnback:jsr dect1
+	bcs trnlp
+
+trnx:	jmp main
+;******************************************************************
+;	Hunt command - hunt for bytes or string
+;
+; syntax:  h 0000 1111 'ascii...   <or>   h 0000 1111 22 33 44 ...
+;******************************************************************
+; $e2ce
 hunt:
-	jsr le983
+	jsr range
 	bcs le334
 	ldy #$00
 	jsr gnc
@@ -534,19 +589,19 @@ le2f8:  lda t0
 le307:  sty verck
 	jsr crlf
 le30c:  ldy #$00
-le30e:  jsr le11a
+le30e:  jsr fetch
 	cmp $0380,y
 	bne le324
 	iny
 	cpy verck
 	bne le30e
-	jsr le892
-	jsr le8a8
-	jsr le8a8
+	jsr putt2
+	jsr putspc
+	jsr putspc
 le324:  jsr $ffe1
 	beq le331
-	jsr le950
-	jsr le93c
+	jsr inct2
+	jsr dect1
 	bcs le30c
 le331:  jmp main
 le334:  jmp error
@@ -578,7 +633,7 @@ le35f:  stx txtptr
 	sta $9f
 	jsr parse
 	bcs le3a3
-	jsr le901
+	jsr t0tot2
 	jsr parse
 	bcs le3a9
 	jsr crlf
@@ -623,7 +678,7 @@ le3a9:  lda #$00
 	!byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 
 fill:
-	jsr le983
+	jsr range
 	bcs le403
 	lda t2+2
 	cmp $03b9
@@ -632,18 +687,18 @@ fill:
 	bcs le403
 	ldy #$00
 le3ee:  lda t0
-	jsr le122
+	jsr stash
 	jsr $ffe1
 	beq le400
-	jsr le950
-	jsr le93c
+	jsr inct2
+	jsr dect1
 	bcs le3ee
 le400:  jmp main
 le403:  jmp error
 
 assem:
 	bcs le442
-	jsr le901
+	jsr t0tot2
 le40b:  ldx #$00
 	stx $03a1
 	stx $03b4
@@ -774,18 +829,18 @@ le519:  dex
 	ldy $03ab
 	bne le524
 le521:  lda $005f,y
-le524:  jsr le122
+le524:  jsr stash
 	dey
 	bne le521
 le52a:  lda $03b1
-	jsr le122
+	jsr stash
 	jsr le8ad
 	jsr primm
 	!pet "a ", esc, "q", 0
 	jsr le5dc
 	inc $03ab
 	lda $03ab
-	jsr le952
+	jsr addt2
 	lda #$41
 	sta keyd
 	lda #$20
@@ -822,13 +877,13 @@ le593:  inc $9f
 
 disasm:
 	bcs le5a3
-	jsr le901
+	jsr t0tot2
 	jsr parse
 	bcc le5a9
 le5a3:  lda #$14
 	sta t0
 	bne le5ae
-le5a9:  jsr le90e
+le5a9:  jsr sub0m2
 	bcc le5d1
 le5ae:  jsr primm
 	!pet cr, esc, "q", 0
@@ -837,7 +892,7 @@ le5ae:  jsr primm
 	jsr le5d4
 	inc $03ab
 	lda $03ab
-	jsr le952
+	jsr addt2
 	lda $03ab
 	jsr le924
 	bcs le5ae
@@ -845,11 +900,11 @@ le5ce:  jmp main
 le5d1:  jmp error
 le5d4:  lda #$2e
 	jsr bsout
-	jsr le8a8
-le5dc:  jsr le892
-	jsr le8a8
+	jsr putspc
+le5dc:  jsr putt2
+	jsr putspc
 	ldy #$00
-	jsr le11a
+	jsr fetch
 	jsr le659
 	pha
 	ldx $03ab
@@ -859,7 +914,7 @@ le5ef:  dex
 	jsr primm
 	!pet "   ", 0
 	jmp le602
-le5fc:  jsr le11a
+le5fc:  jsr fetch
 	jsr puthxs
 le602:  iny
 	cpy #$03
@@ -875,7 +930,7 @@ le60f:  cpx #$03
 le618:  lda $03aa
 	cmp #$e8
 	php
-	jsr le11a
+	jsr fetch
 	plp
 	bcs le641
 	jsr puthex
@@ -965,7 +1020,7 @@ le6b0:  asl t1+1
 	jsr bsout
 	dex
 	bne le6ac
-	jmp le8a8
+	jmp putspc
 nmode:
 	!byte $40,2,$45,3
 	!byte $d0,8,$40,9
@@ -1094,7 +1149,7 @@ le813:  sta $03b5
 	bne le82e
 	ldx #$02
 le826:  lda t0,x
-	sta $03b7,x
+	sta temps,x
 	dex
 	bpl le826
 le82e:  ldx $03b6
@@ -1106,11 +1161,11 @@ le831:  asl t0
 	bne le831
 	cpy #$0a
 	bne le862
-	asl $03b7
+	asl temps
 	rol $03b8
 	rol $03b9
 	bcs le87c
-	lda $03b7
+	lda temps
 	adc t0
 	sta t0
 	lda $03b8
@@ -1148,18 +1203,20 @@ le87e:	clc
 bases:	!byte 16,10, 8, 2
 shifts:	!byte  4, 3, 3, 1
 
-le892:	lda t2+2
+; $8892 print t2 as 5 hex digits:	BHHLL
+putt2:	lda t2+2
 	jsr makhex
 	txa
 	jsr bsout
 	lda t2
 	ldx t2+1
+
 le89f:  pha
 	txa
 	jsr puthex
 	pla
 puthxs:  jsr puthex
-le8a8:  lda #$20
+putspc:  lda #$20
 	jmp bsout
 le8ad:  jsr primm
 	!pet cr, $91, 0
@@ -1202,14 +1259,14 @@ le8f9:  php
 	ldx $03af
 	plp
 	rts
-le901:  lda t0
+t0tot2:  lda t0
 	sta t2
 	lda t0+1
 	sta t2+1
 	lda t0+2
 	sta t2+2
 	rts
-le90e:  sec
+sub0m2:  sec
 	lda t0
 	sbc t2
 	sta t0
@@ -1220,7 +1277,7 @@ le90e:  sec
 	sbc t2+2
 	sta t0+2
 	rts
-le922:  lda #$01
+dect0:  lda #$01
 le924:  sta $03af
 	sec
 	lda t0
@@ -1233,7 +1290,7 @@ le924:  sta $03af
 	sbc #$00
 	sta t0+2
 	rts
-le93c:  sec
+dect1:  sec
 	lda t1
 	sbc #$01
 	sta t1
@@ -1244,8 +1301,8 @@ le93c:  sec
 	sbc #$00
 	sta t1+2
 	rts
-le950:  lda #$01
-le952:  clc
+inct2:  lda #$01
+addt2:  clc
 	adc t2
 	sta t2
 	bcc le95f
@@ -1253,7 +1310,7 @@ le952:  clc
 	bne le95f
 	inc t2+2
 le95f:  rts
-le960:  sec
+dect2:  sec
 	lda t2
 	sbc #$01
 	sta t2
@@ -1264,7 +1321,7 @@ le960:  sec
 	sbc #$00
 	sta t2+2
 	rts
-le974:  bcs le982
+t0topc:  bcs le982
 	lda t0
 	ldy t0+1
 	ldx t0+2
@@ -1272,17 +1329,17 @@ le974:  bcs le982
 	sty pch
 	stx pcb
 le982:  rts
-le983:  bcs +
-	jsr le901
+range:  bcs +
+	jsr t0tot2
 	jsr parse
 	bcs +
 	lda t0
-	sta $03b7
+	sta temps
 	lda t0+1
 	sta $03b8
 	lda t0+2
 	sta $03b9
-	jsr le90e
+	jsr sub0m2
 	lda t0
 	sta t1
 	lda t0+1
@@ -1329,7 +1386,7 @@ le9c7:  lda t0
 	ldy #$00
 	jsr lea47
 	jmp main
-lea07:  jsr le901
+lea07:  jsr t0tot2
 	lda #$00
 	ldx #$07
 lea0e:  sta $03a0,x
@@ -1521,9 +1578,9 @@ leb87:  lda #$ab
 	sta $5d
 	lda #$03
 	sta $5e
-	ldx $01
+	ldx i6509
 	lda #$0f
-	sta $01
+	sta i6509
 	ldy #$07
 leb97:  lda keyd,y
 	sta ($5d),y
@@ -1535,7 +1592,7 @@ leb97:  lda keyd,y
 	sty $5e
 	lda #$08
 	sta ($5d),y
-	stx $01
+	stx i6509
 	rts
 lebae:  ldy #$01
 	sty tmpc
@@ -1552,9 +1609,9 @@ lebae:  ldy #$01
 	lda $00
 	sta $92
 	rts
-lebca:  ldx $01
+lebca:  ldx i6509
 	lda #$0f
-	sta $01
+	sta i6509
 	lda #$00
 	sta $5d
 	sta $5e
@@ -1568,7 +1625,7 @@ lebd8:  lda $0000,y
 	bne lebd8
 lebe6:  cpy #$8f
 	bne lebd8
-	stx $01
+	stx i6509
 	rts
 lebed:  jsr le13b
 	and #$10
@@ -1579,9 +1636,13 @@ lebed:  jsr le13b
 lebff:	jsr primm
 	!pet " error", 0
 	jmp main
-
+;********************************************************************
+;	Jsr command- start executing at either the supplied address,
+;	   or (default) the current contents of the PC reg.
+;	   return is to monitor 'main' loop.
+;********************************************************************
 gosub:
-	jsr le974
+	jsr t0topc
 	lda pcb
 	cmp $00
 	beq lec3a
@@ -1600,7 +1661,7 @@ lec1b:  sei
 	lda flgs
 	pha
 	lda pcb
-	sta $01
+	sta i6509
 	lda acc
 	ldx xr
 	ldy yr
@@ -1608,7 +1669,9 @@ lec1b:  sei
 	jmp $feb5
 lec3a:  lda #$e0
 	pha
-lec3d:	lda #$8a	; $ec3e: txa
+	!byte $a9	;lda #$8a
+goto:	
+	txa
 	pha
 	lda pch
 	sta t0+1
