@@ -2,6 +2,7 @@
 ; KERNAL.PRG
 ; comments+labels vossi 05/2020
 ; P500 patches vossi 05/2020
+; fix01 changed ptr to same address in monitor
 !cpu 6502
 !ct pet
 ; switches
@@ -23,9 +24,8 @@ irom	= $f		; System bank
 e6509	= $00		; 6509 execution bank reg
 i6509	= $01		; 6509 indirect bank reg
 ipoint	= $ac		; tx routine usage
-lstp	= $ce		; Screen editor start position
-lsxp	= $cf		; Screen editor start row
 
+ptr	= $5d		; 2 bytes pointer to message char
 tmpbnk	= $30		; temporaray ibank storage
 tpiptr	= $41		; pointer to TPI
 ; -------------------------------------------------------------------------------------------------
@@ -94,41 +94,42 @@ irq:	pha			; save regs
 	pla
 	rti
 
-intirq:	lda #>mirq+2
+intirq:	lda #>mirq+2		; call monitor irq
 	pha
 	lda #<mirq+2
 	pha
 	jmp exnmi
 
-extirq:	lda #>udtime+2
+extirq:	lda #>udtime+2		; call system timer irq
 	pha
 	lda #<udtime+2
 	pha
 	jmp exnmi
 
-iprimm:	pha
+iprimm:				; print monitor message
+	pha			; ...zero-terminated text behind jsr
 	txa
 	pha
 	tya
 	pha
-	ldy #$00
+	ldy #0
 	ldx i6509
-	stx tmpbnk
+	stx tmpbnk		; remember ibank
 	ldx e6509
-	stx i6509
--	tsx
-	inc stack+4,x
+	stx i6509		; switch to system bank
+msglp:	tsx
+	inc stack+4,x		; increase return address of jsr primm to get text address
 	bne +
-	inc stack+5,x
+	inc stack+5,x		; inc hi
 +	lda stack+4,x
-	sta lstp
+	sta ptr			; set pointer to char address
 	lda stack+5,x
-	sta lsxp
-	lda (lstp),y
-	beq +
+	sta ptr+1
+	lda (ptr),y		; load char 
+	beq msgend
 	jsr bsout
-	bcc -
-+	ldx tmpbnk
+	bcc msglp
+msgend:	ldx tmpbnk		; restore bank
 	stx i6509
 	pla
 	tay

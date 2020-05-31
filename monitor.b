@@ -8,7 +8,7 @@
 !ct pet
 ; switches
 ;P500	= 1
-
+;TEST	= 1		;***** test directly write to kernal keybuffer *****
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -33,11 +33,13 @@ ndx	= $d1		;kernal keyboard buffer index
 keyd	= $03ab		;10by kernal keyboard buffer
 
 ; used by monitor-kernal
-tmpbnk	= $30		;temporaray ibank storage
-;tpiptr	= $41		;pointer to TPI
+;tpiptr	= $41		;pointer to TPI (used in IRQ !)
 ;ipoint	= $ac		;tx routine usage
-;lstp	= $ce		;Screen editor start position
-;lsxp	= $cf		;Screen editor start row
+
+; used bey monitor + monitor-kernal
+tmpbnk	= $30		;temporaray ibank storage
+ptr	= $5d		;2by pointer keyd,status / primm pointer to message char
+
 
 ; monitor zp
 pcb	= $02		;shadow regs
@@ -49,7 +51,6 @@ xr	= $07
 yr	= $08
 sp	= $09
 
-ptr	= $5d		;2bytes pointer
 temp	= $5f		;use basic fac for monitor zp
 
 t0	= $60		;3by pointer
@@ -336,7 +337,9 @@ getstat:ldx i6509	;remember ibank
 	lda (ptr),y	; get status
 	stx i6509	; restore ibank
 	rts
+!ifndef P500{
 !fill 10,$ff
+}
 ;********************************************
 ;	Display memory command
 ;********************************************
@@ -607,7 +610,7 @@ hunnxch:sta xcnt,y
 
 hunhex:	
 !ifdef P500{
-!fill 3, $ff
+;!fill 3, $ff
 } else{
 	sty bad		;zero for rdob
 }
@@ -731,7 +734,9 @@ verify	lda #$80	;flag for verify
 ;******************************************************************
 ;	Fill command - F starting-address ending-address value
 ;******************************************************************
+!ifndef P500{
 !fill 16, $ff
+}
 ; $e3db
 fill:
 	jsr range	;sa in t2, len in t1
@@ -963,7 +968,7 @@ as500: 	lda wrap	;get good op code
 	lda #>keyd
 	sta ptr+1
 	lda i6509	;remember ibank
-	sta tibnk
+	sta tmpbnk
 	lda #irom
 	sta i6509	;switch to system bank
 
@@ -1007,7 +1012,7 @@ as500: 	lda wrap	;get good op code
 	lda #8		; store 8 keys in buffer
 	sta (ptr),y
 
-	lda tibnk
+	lda tmpbnk
 	sta i6509	; restore ibank
 	rts
 } else{
@@ -1847,7 +1852,7 @@ leb66:  jsr crlf
 	bne leb2f
 
 !ifdef P500{
-!fill 21, $ff
+;!fill 21, $ff
 } else{
 setmod:
 	lda hw_irq
@@ -1901,7 +1906,7 @@ lsinit:
 	lda e6509
 	sta fnadr+2
 	rts
-; $ebca copy file patameter for kernal routine to system bank
+; $ebca copy file parameter for kernal routine to system bank
 fparcpy:
 	ldx i6509
 	lda #irom
