@@ -6,3 +6,6 @@ converted to P500 by vossi 05/2020
 Necessary:
 - P500 patched kernal by vossi
 - P500 patched basic (sys command redirected to kernal)
+
+fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d
+fix02 change 4x fa in assembler to temp

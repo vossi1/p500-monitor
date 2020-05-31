@@ -2,7 +2,8 @@
 ; MONITOR.PRG
 ; comments+labels vossi 05/2020
 ; P500 patches vossi 05/2020
-; fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d
+; fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d, 1by diff to org
+; fix02 change 4x fa in assembler to temp, total 5by diff to org 
 !cpu 6502
 !ct pet
 ; switches
@@ -25,6 +26,7 @@ esc	= $1b
 ; -------------------------------------------------------------------------------------------------
 ; zero page stuff
 i6509	= $01		;6509 indirect bank reg
+e6509	= $00		;6509 execution bank reg
 
 ;only in bank 15
 ndx	= $d1		;kernal keyboard buffer index
@@ -72,6 +74,7 @@ status	= $9c		;I/O operation status
 fnlen	= $9d		;File name length
 fa	= $9f		;Current first address
 sa	= $a0		;Current secondary address
+
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
 
@@ -154,7 +157,7 @@ call:			;////// entry for 'jmp' or 'sys'
 	ldy #>monitor
 	sta pcl
 	sty pch
-	lda $00
+	lda e6509
 	sta pcb
 	jsr primm
 !ifdef P500{
@@ -333,10 +336,10 @@ getstat:ldx i6509	;remember ibank
 	lda (ptr),y	; get status
 	stx i6509	; restore ibank
 	rts
+!fill 10,$ff
 ;********************************************
 ;	Display memory command
 ;********************************************
-*= $e152
 ; $e152
 dspmem:
 	bcs dsp12l	;no range, do 1/2 screen
@@ -385,37 +388,37 @@ dsperr:	jmp error
 ; $e194
 setreg:
 	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
-	ldy #$00
--	jsr parse
-	bcs +		;quit anytime arg list is empty
+	ldy #0
+setrlp:	jsr parse
+	bcs setrx	;quit anytime arg list is empty
 	lda t0
-	sta $0005,y
+	sta $0000+flgs,y
 	iny
-	cpy #$05
-	bcc -
-+	jmp main
+	cpy #5
+	bcc setrlp
+setrx:	jmp main
 ;********************************************
 ;	Alter memory command
 ;********************************************
 ; $e1ab
 setmem:
-	bcs +++		;...branch if no arguments- just regurgitate existing data
+	bcs setmx	;...branch if no arguments- just regurgitate existing data
 	jsr t0tot2	;destination bank, addr in 't2'
 	ldy #0
 
--	jsr parse	;scan for next argument
-	bcs +++		;...branch if eol
+setmlp:	jsr parse	;scan for next argument
+	bcs setmx	;...branch if eol
 	lda t0		;get the byte to stash
 	jsr stash	;stash it
 	iny
 	bit mode
-	bpl +
+	bpl setm40c
 	cpy #16
-	bcc -
-+	cpy #8
-	bcc -
+	bcc setmlp
+setm40c:cpy #8
+	bcc setmlp
 
-+++	jsr primm	;clear all modes & cursor up
+setmx:	jsr primm	;clear all modes & cursor up
 	!pet esc, "o", $91, 0
 
 	jsr dmpone
@@ -507,7 +510,7 @@ trnsfr:
 trnerr:	jmp error
 
 trnok:	bit verck
-	bpl trnnxln		;...branch if compare (direction crap unimportant)
+	bpl trnnxln	;...branch if compare (direction crap unimportant)
 
 	sec		;determine direction of transfer (to avoid stepping on ourselves!)
 	lda t2
@@ -604,7 +607,7 @@ hunnxch:sta xcnt,y
 
 hunhex:	
 !ifdef P500{
-	nop:nop:nop
+!fill 3, $ff
 } else{
 	sty bad		;zero for rdob
 }
@@ -692,7 +695,7 @@ lsgo:	stx txtptr
 	bne lserr
 	lda #0
 	sta sa
-	ldx #$02
+	ldx #2
 lsadrcp:lda t2,x
 	sta stal,x	;copy start adr kernal pointer
 	lda t0,x
@@ -724,11 +727,11 @@ verify	lda #$80	;flag for verify
 	ldy t2+1
 	ora t2+2
 	jsr _load	;do load/verify
-	jmp lebed
+	jmp lsstate	;print load/save result
 ;******************************************************************
 ;	Fill command - F starting-address ending-address value
 ;******************************************************************
-*= $e3db
+!fill 16, $ff
 ; $e3db
 fill:
 	jsr range	;sa in t2, len in t1
@@ -798,10 +801,10 @@ aserr:	jmp error
 
 asstart:ldx #$02	;move output buffer index past crunched mnemonic
 
-le447:  lda count	;after first number copy everything else to output buffer
-	bne le47c
+asoplp:	lda count	;after first number copy everything else to output buffer
+	bne asopend
 	jsr eval	;evaluate next parameter, if number crunch it
-	beq le47a	;...branch if not a number
+	beq asoptxt	;...branch if not a number
 	bcs aserr	;...branch if illegal number
 
 	lda #'$'
@@ -812,36 +815,36 @@ le447:  lda count	;after first number copy everything else to output buffer
 	ldy #4
 	lda shift	;kludge to allow user to force absolute over zero page
 	cmp #8
-	bcc le46b	;...allow only hex or octal bases to force absolute
+	bcc asopchk	;...allow only hex or octal bases to force absolute
 	cpy count
-	beq le471	;...branch to force absolute	
-le46b:  lda t0+1
-	bne le471	;...branch if 2-byte field
+	beq asop2by	;...branch to force absolute	
+asopchk:lda t0+1
+	bne asop2by	;...branch if 2-byte field
 	ldy #2		;else set up  1-byte field
 
-le471:  lda #'0'
-le473:  sta hulp,x
+asop2by:lda #'0'
+asopzlp:sta hulp,x
 	inx
 	dey
-	bne le473
+	bne asopzlp
 
-le47a:  dec txtptr	;re-get last character from input buffer
-le47c:  jsr gnc		;copy rest of input buffer to output buffer
-	beq le48f	;...branch if eol
-	cmp #$20
-	beq le447	;...squish out spaces
+asoptxt:dec txtptr	;re-get last character from input buffer
+asopend:jsr gnc		;copy rest of input buffer to output buffer
+	beq asopeol	;...branch if eol
+	cmp #' '
+	beq asoplp	;...squish out spaces
 	sta hulp,x	;hopefully it's of one of these:   #,()
 	inx
 	cpx #10
-	bcc le447	;...loop until eol or
+	bcc asoplp	;...loop until eol or
 	bcs aserr	;...buffer overflow
 
-le48f:  stx t1		;save input # of characters
+asopeol:stx t1		;save input # of characters
 	ldx #0
 	stx wrap	;start trial at zero
 
-as110:  ldx #$00
-	stx fa		;disa index=0
+as110:  ldx #0
+	stx temp	;disa index=0
 	lda wrap	;get trial byte
 	jsr dset	;digest it
 	ldx format	;save format for later
@@ -881,7 +884,7 @@ as240:  dex
 as250:  jsr tst2	;test a word,4 chars
 	jsr tst2
 as300:  lda t1	  	;check # chars of both
-	cmp fa
+	cmp temp
 	beq as310	;match, skip
 	jmp tst05	;fail
 
@@ -914,10 +917,32 @@ as340:  dex	     	;subtract 2 from 'diff' for instr
 	ldy length	;set index to length
 	bne as420	;branch always
 
-as400
-	lda t0-1,y      ;no-put byte out there
-as420
-	jsr stash
+!ifdef TEST{ 
+aerr:	jmp error
+
+;  test char in .a with char in hulp
+;
+tst2:	jsr tstrx	;test for '00' (do two tests)
+
+tstrx:	stx sxreg
+	ldx temp	;get current position
+	cmp hulp,x	;same char
+	beq tst10	;yes-skip
+	pla	     	;pull jsr off stack
+	pla
+
+tst05:	inc wrap	;try next trial
+	beq aerr	;=0 tried all,sorry
+	jmp as110
+
+tst10:	inc temp
+	ldx sxreg	;restore x
+	rts
+}
+
+as400:	lda t0-1,y      ;no-put byte out there
+
+as420:	jsr stash
 	dey
 	bne as400
 
@@ -932,6 +957,60 @@ as500: 	lda wrap	;get good op code
 	lda length
 	jsr addt2	;update address
 
+!ifdef TEST{
+	lda #<keyd
+	sta ptr		;set ptr to kernal keyboard buffer
+	lda #>keyd
+	sta ptr+1
+	lda i6509	;remember ibank
+	sta tibnk
+	lda #irom
+	sta i6509	;switch to system bank
+
+	ldy #$00	;init .y, makhex doesn't destroy .y !
+	lda #'a'	;set up next line with 'a bnnnn ' for convenience
+	sta (ptr),y	;put it in the keyboard buffer
+	iny
+	lda #' '	;#1
+	sta (ptr),y
+
+	iny		;#2
+	lda t2+2	;get the bank number
+	jsr makhex	;get hi byte in .a (which we'll ignore), and lo in .x
+	txa
+	sta (ptr),y
+
+	iny		;#3
+	lda t2+1	;next get mid byte of address
+	jsr makhex
+	sta (ptr),y	;..and put in buffer,
+	iny
+	txa
+	sta (ptr),y
+
+	iny		;#5
+	lda t2		;then get the low byte of address,
+	jsr makhex
+	sta (ptr),y	;..and put that in the buffer, too.
+	iny
+	txa
+	sta (ptr),y
+
+	iny		;#7
+	lda #' '	;space at the end
+	sta (ptr),y
+
+	lda #<ndx	; set pointer to kernal keybuffer index
+	sta ptr
+	ldy #$00
+	sty ptr+1
+	lda #8		; store 8 keys in buffer
+	sta (ptr),y
+
+	lda tibnk
+	sta i6509	; restore ibank
+	rts
+} else{
 	lda #'a'	;set up next line with 'a bnnnn ' for convenience
 	sta mkeyd	;put it in the keyboard buffer
 	lda #' '
@@ -948,174 +1027,222 @@ as500: 	lda wrap	;get good op code
 	jsr makhex
 	sta mkeyd+5	;..and put that in the buffer, too.
 	stx mkeyd+6
-	jsr asprint		; *******signal that we put 8 char's in the buffer
+	jsr asprint	; print new assembler input line
 	nop
+}
 	jmp main
 
-
+!ifndef TEST{ 
 aerr:	jmp error
+
 ;  test char in .a with char in hulp
 ;
-tst2:  jsr tstrx
-tstrx:  stx sxreg
-	ldx fa
-	cmp hulp,x
-	beq le593
-	pla
-	pla
-tst05:  inc wrap
-	beq aerr
-	jmp as110
-le593:  inc fa
-	ldx sxreg
-	rts
+tst2:	jsr tstrx	;test for '00' (do two tests)
 
+tstrx:	stx sxreg
+	ldx temp	;get current position
+	cmp hulp,x	;same char
+	beq tst10	;yes-skip
+	pla	     	;pull jsr off stack
+	pla
+
+tst05:	inc wrap	;try next trial
+	beq aerr	;=0 tried all,sorry
+	jmp as110
+
+tst10:	inc temp
+	ldx sxreg	;restore x
+	rts
+}
+
+;***************************************************
+;	Mini disassembler
+;***************************************************
+; $e599
 disasm:
-	bcs le5a3
+	bcs dishpag	;use a default length from current sa
 	jsr t0tot2
 	jsr parse
-	bcc le5a9
-le5a3:  lda #DISDEF
+	bcc disto	;got sa,ea. use 'em
+
+dishpag:lda #DISDEF	;guess at 1/2 page
 	sta t0
-	bne le5ae
-le5a9:  jsr sub0m2
-	bcc le5d1
-le5ae:  jsr primm
+	bne dislp	;always
+
+disto:	jsr sub0m2    	;put ea-sa in t0
+	bcc diserr	;...branch if sa > ea
+
+dislp:  jsr primm	;print <cr> & delete to end of line for neatness
 	!pet cr, esc, "q", 0
 	jsr stop
-	beq le5ce
-	jsr le5d4
+	beq disx	;...branch if user requests abort
+	jsr dis300      ;disassemble 1 line
 	inc length
 	lda length
 	jsr addt2
 	lda length
-	jsr le924
-	bcs le5ae
-le5ce:  jmp main
-le5d1:  jmp error
-le5d4:  lda #$2e
+	jsr subt0
+	bcs dislp
+
+disx:	jmp main
+
+diserr:	jmp error
+
+dis300:	lda #'.'
 	jsr bsout
 	jsr putspc
-dis400:  jsr putt2
+
+dis400:	jsr putt2
 	jsr putspc
-	ldy #$00
-	jsr fetch
-	jsr dset
-	pha
-	ldx length
+	ldy #0
+	jsr fetch	;get a byte from memory
+	jsr dset	;get instr & digest it
+
+	pha	      	;dump (length+1) bytes
+	ldx length      ;(.y=0 from 'dset' above)
 	inx
-le5ef:  dex
-	bpl le5fc
-	jsr primm
+
+pradr0:	dex
+	bpl pradrl      ;pad non-printers
+	jsr primm	;print 3 spaces
 	!pet "   ", 0
-	jmp le602
-le5fc:  jsr fetch
+	jmp pradrm
+
+pradrl:	jsr fetch
 	jsr puthxs
-le602:  iny
-	cpy #$03
-	bcc le5ef
+
+pradrm:	iny
+	cpy #3
+	bcc pradr0
 	pla
-	ldx #$03
-	jsr le6a1
-	ldx #$06
-le60f:  cpx #$03
-	bne le62a
+
+	ldx #3
+	jsr prmne	;print mnemonic
+	ldx #6	   	;6 format bits
+
+pradr1:	cpx #$03
+	bne pradr3     	;if x=3 print adr val
 	ldy length
-	beq le62a
-le618:  lda format
-	cmp #$e8
-	php
+	beq pradr3     	;no print if len=0
+
+pradr2:	lda format
+	cmp #$e8 	;relative addressing mode?
+	php		;save carry
 	jsr fetch
 	plp
-	bcs le641
+	bcs reladr
 	jsr puthex
 	dey
-	bne le618
-le62a:  asl format
-	bcc le63d
-	lda $e714,x
+	bne pradr2
+
+pradr3:	asl format	;test next format bit
+	bcc pradr4	;no print if=0
+	lda char1-1,x
 	jsr bsout
-	lda $e71a,x
-	beq le63d
+	lda char2-1,x
+	beq pradr4
 	jsr bsout
-le63d:  dex
-	bne le60f
+
+pradr4:	dex
+	bne pradr1
 	rts
-le641:  jsr le64d
-	clc
-	adc #$01
-	bne le64a
+
+reladr: jsr pcadj3	;pcl,h + disp + 1 into a,x
+	clc	      	;add 1
+	adc #1
+	bne relad2
 	inx
-le64a:  jmp le89f
-le64d:  ldx t2+1
+
+relad2:	jmp putwrd
+
+pcadj3:	ldx t2+1
 	tay
-	bpl le653
+	bpl pcadj4
 	dex
-le653:  adc t2
-	bcc le658
+
+pcadj4:	adc t2
+	bcc pcrts
 	inx
-le658:  rts
-dset:  tay
-	lsr
-	bcc le668
-	lsr
-	bcs le677
+
+pcrts:	rts
+
+; disassembler digest routine
+; $e659
+dset:	tay
+	lsr	    	;even/odd test
+	bcc ieven
+	lsr	    	;test b1
+	bcs err	  	;xxxxxx11 instr bad
 	cmp #$22
-	beq le677
-	and #$07
-	ora #$80
-le668:  lsr
+	beq err	  	;10001001 instr bad
+	and #$07	;mask 3 bits for adr mode
+	ora #$80 	;add indexing offset
+
+ieven:	lsr	    	;left/right test
 	tax
-	lda nmode,x
-	bcs le673
+	lda nmode,x	;index into mode table
+	bcs rtmode 	;if carry set use lsb for
+	lsr	    	;print format index
 	lsr
+	lsr	    	;if carry clr use msb
 	lsr
-	lsr
-	lsr
-le673:  and #$0f
-le675:  bne le67b
-le677:  ldy #$80
-	lda #$00
-le67b:  tax
-	lda $e707,x
-	sta format
-	and #$03
-	sta length
-	tya
-	and #$8f
-	tax
-	tya
-	ldy #$03
+
+rtmode:	and #$0f	;mask for 4-bit index
+	bne getfmt	;$0 for bad opcodes
+
+err:	ldy #$80	;sub $80 for bad opcode
+	lda #0	   	;set format index to zero
+
+getfmt:	tax
+	lda nmode2,x	;index into prt format tab
+	sta format	;save for adr field format
+	and #3	   	;mask 2-bit length. 0=1byte
+	sta length	;1=2byte,2=3byte
+	tya	      	;op code
+	and #$8f	;mask for 1xxx1010 test
+	tax	      	;save in x
+	tya	      	;op code again
+	ldy #3
 	cpx #$8a
-	beq le69d
-le692:  lsr
-	bcc le69d
+	beq mnndx3
+
+mnndx1:	lsr
+	bcc mnndx3	;form index into mnemonic tab
 	lsr
-le696:  lsr
-	ora #$20
-	dey
-	bne le696
-	iny
-le69d:  dey
-	bne le692
-	rts
-le6a1:  tay
-	lda $e721,y
+
+mnndx2:	lsr	    	;1xxx1010->00101xxx
+	ora #$20	;xxxyyy01->00111xxx
+	dey	      	;xxxyyy10->00110xxx
+	bne mnndx2	;xxxyy100->00100xxx
+	iny	      	;xxxxx000->000xxxxx
+
+mnndx3:	dey
+	bne mnndx1
+	rts	      	;(.y=0 is assumed!)
+
+; print mnemonic
+; enter x=3 characters
+; $e6a1
+prmne:	tay
+	lda mneml,y	;fetch 3 char mnemonic
 	sta t1
-	lda $e761,y
+	lda mnemr,y
 	sta t1+1
-le6ac:  lda #$00
-	ldy #$05
-le6b0:  asl t1+1
-	rol t1
-	rol
+
+prmn1:	lda #0
+	ldy #5
+
+prmn2:	asl t1+1	;shift 5 bits of char
+	rol t1	   	;into a
+	rol	    	;clear carry
 	dey
-	bne le6b0
-	adc #$3f
+	bne prmn2
+	adc #$3f	;add '?' offset
 	jsr bsout
 	dex
-	bne le6ac
-	jmp putspc
+	bne prmn1
+	jmp putspc	;finish with space
+
 nmode:
 	!byte $40,2,$45,3
 	!byte $d0,8,$40,9
@@ -1238,19 +1365,19 @@ le7dd:  jsr gnc		;get next character
 	bne le7e5
 	jmp eval_ok	;...branch if end of line
 le7e5:  cmp #$20
-	beq le7dd
+	beq le7dd	;...branch & ignore leading spaces
 
 	ldx #$03
-le7eb:  cmp cmdnum,x
-	beq le7f6
+le7eb:  cmp cmdnum,x	;is first character a base prefix?
+	beq le7f6	;...yes
 	dex
 	bpl le7eb
 
-	inx
-	dec txtptr
+	inx		;...no: default base to hex
+	dec txtptr	;to reget digit
 
-le7f6:  ldy bases,x
-	lda shifts,x
+le7f6:  ldy bases,x	;this is the base
+	lda shifts,x	;this is the # of shifts required for given base
 	sta shift
 
 le7ff:  jsr gnc		;get next character
@@ -1344,7 +1471,7 @@ putt2:	lda t2+2	;get bank (a19-a16)
 	lda t2		;get address (a15-a0)
 	ldx t2+1
 
-le89f:  pha		;print address:  msb first, then lsb
+putwrd:  pha		;print address:  msb first, then lsb
 	txa
 	jsr puthex
 	pla
@@ -1358,7 +1485,7 @@ cronly:	jsr primm	;print <cr><crsr-up>
 	!pet cr, $91, 0
 	rts
 
-crlf:	lda #$0d
+crlf:	lda #cr
 	jmp bsout
 
 new_line:
@@ -1428,8 +1555,11 @@ sub0m2:  sec
 	sbc t2+2
 	sta t0+2
 	rts
+;  decrement t0
+; $e922
 dect0:  lda #$01
-le924:  sta sxreg
+
+subt0:  sta sxreg	;subtract .a from t2
 	sec
 	lda t0
 	sbc sxreg
@@ -1441,6 +1571,7 @@ le924:  sta sxreg
 	sbc #$00
 	sta t0+2
 	rts
+
 dect1:  sec
 	lda t1
 	sbc #$01
@@ -1452,7 +1583,9 @@ dect1:  sec
 	sbc #$00
 	sta t1+2
 	rts
+
 inct2:  lda #$01
+
 addt2:  clc
 	adc t2
 	sta t2
@@ -1461,6 +1594,7 @@ addt2:  clc
 	bne le95f
 	inc t2+2
 le95f:  rts
+
 dect2:  sec
 	lda t2
 	sbc #$01
@@ -1472,7 +1606,8 @@ dect2:  sec
 	sbc #$00
 	sta t2+2
 	rts
-t0topc:  bcs le982
+
+t0topc:	bcs le982
 	lda t0
 	ldy t0+1
 	ldx t0+2
@@ -1480,6 +1615,7 @@ t0topc:  bcs le982
 	sty pch
 	stx pcb
 le982:  rts
+
 range:  bcs +
 	jsr t0tot2
 	jsr parse
@@ -1487,9 +1623,9 @@ range:  bcs +
 	lda t0
 	sta temps
 	lda t0+1
-	sta $03b8
+	sta temps+1
 	lda t0+2
-	sta $03b9
+	sta temps+2
 	jsr sub0m2
 	lda t0
 	sta t1
@@ -1502,7 +1638,9 @@ range:  bcs +
 	!byte $24	; skip next
 +	sec
 	rts
-convert:  jsr pargot
+
+convert:
+	jsr pargot
 	jsr new_line
 	lda #$24
 	jsr bsout
@@ -1513,7 +1651,7 @@ convert:  jsr pargot
 	jsr bsout
 le9c7:  lda t0
 	ldx t0+1
-	jsr le89f
+	jsr putwrd
 	jsr new_line
 	lda #$2b
 	jsr bsout
@@ -1537,13 +1675,14 @@ le9c7:  lda t0
 	ldy #$00
 	jsr lea47
 	jmp main
+
 lea07:  jsr t0tot2
 	lda #$00
 	ldx #$07
 lea0e:  sta hulp,x
 	dex
 	bpl lea0e
-	inc $03a7
+	inc hulp+7
 	ldy #$17
 	php
 	sei
@@ -1707,7 +1846,9 @@ leb66:  jsr crlf
 	ldy #$02
 	bne leb2f
 
-!ifndef P500{
+!ifdef P500{
+!fill 21, $ff
+} else{
 setmod:
 	lda hw_irq
 	cmp #$00
@@ -1720,7 +1861,6 @@ setmod:
 	!pet esc, "h", 0
 	rts
 }
-*= $eb87
 ; $eb87	outsourced from assem - copy new line to kernal keyboard buffer
 asprint:lda #<keyd
 	sta ptr		; set ptr to kernal keyboard buffer
@@ -1746,19 +1886,19 @@ asprtlp:lda mkeyd,y	; get from monitor key buffer
 	rts
 ; $ebae	setp load/save
 lsinit:	
-	ldy #$01
+	ldy #1
 	sty fa		;setup defaults: tape, fixed_load, no filename
 	sty sa
 	dey		;(.y=0)
-	sty eas
-	sty stas
+	sty eas		;default l/s/v from/to bank 0
+	sty stas	;default l/s/v from/to bank 0
 	sty status
-	sty fnlen
-	lda #$80
-	sta fnadr
-	lda #$03
+	sty fnlen	;default no filename
+	lda #<xcnt
+	sta fnadr	;filename address in monitor bank
+	lda #>xcnt
 	sta fnadr+1
-	lda $00
+	lda e6509
 	sta fnadr+2
 	rts
 ; $ebca copy file patameter for kernal routine to system bank
@@ -1769,26 +1909,26 @@ fparcpy:
 	lda #$00
 	sta ptr		; init pointer
 	sta ptr+1
-	ldy #$a0
+	ldy #sa		; end of file params
 fparlp:	lda $0000,y
 	sta (ptr),y	; copy file parm $90-$92, $96-$a0
 	dey
-	cpy #$95
+	cpy #eal-1	; end of upper part list
 	bne +
-	ldy #$92
+	ldy #fnadr+2	; lower part of list
 	bne fparlp
-+	cpy #$8f
++	cpy #fnadr-1	; start of file params
 	bne fparlp
 	stx i6509	; restore ibank
 	rts
-; $ebed
-lebed:  jsr getstat
+; $ebed print load/save state
+lsstate:jsr getstat	; get load/save state
 	and #$10
-	bne lebff
+	bne lssterr	; error detected
 	jsr primm
 	!pet cr, "ok", cr, 0
 	jmp main
-lebff:	jsr primm
+lssterr:jsr primm
 	!pet " error", 0
 	jmp main
 ;********************************************************************
