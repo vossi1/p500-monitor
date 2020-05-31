@@ -3,22 +3,15 @@
 ; comments+labels vossi 05/2020
 ; P500 patches vossi 05/2020
 ; fix01 changed ptr to same address in monitor
+; fix02 default p500 irq - changeable by basic poke, reset+nmi vector to monitor break
 !cpu 6502
 !ct pet
-; switches
-P500	= 1
-
-!ifdef P500{
-	!to "kernal500.prg", cbm
-} else{
-	!to "kernal.prg", cbm
-}
+!to "kernal.prg", cbm
 !initmem $00
+; switches
+; BASIC: 600/700 = POKE 65098,123 / default P500 POKE 65098,130
 ; constants
-
-; Equates
 irom	= $f		; System bank
-
 ; -------------------------------------------------------------------------------------------------
 ; zero page
 e6509	= $00		; 6509 execution bank reg
@@ -45,15 +38,10 @@ air	= $7		; Active interrupt register
 
 bsout	= $ffd2
  
-!ifdef P500{
-udtime	= $f980		; update system time P500
-nmi	= $fb3d		; nmi P500
-start	= $f99e 	; reset P500
-} else{
-udtime	= $f979		; update system time
-nmi	= $fb31		; nmi
-start	= $f997 	; reset
-}
+udtime	= $f980		; P500 update system time P500
+;udtime	= $f979		; CBM2 600/700 update system time
+nmi	= mbreak	; nmi P500
+start	= mbreak 	; reset P500
 ; -------------------------------------------------------------------------------------------------
 *= $fe00
 ; $fe00 interrupt handler
@@ -74,8 +62,8 @@ irq:	pha			; save regs
 +	lda i6509
 	pha			; save ibank
 	cld
-	ldy #$00
-	lda #$0f
+	ldy #0
+	lda #irom
 	sta i6509		; switch to systembank
 	lda (tpiptr),y		; and load TPI interrupt reg
 	beq ++			; skip if no irq
@@ -83,7 +71,7 @@ irq:	pha			; save regs
 	bne +			; skip if not 50/60Hz irq
 	jsr intirq
 	jsr extirq
-+	ldy #$00
++	ldy #0
 	sta (tpiptr),y		; clear interrupt
 ++	pla
 	sta i6509		; restore ibank, regs
