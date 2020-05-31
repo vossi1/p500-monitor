@@ -8,7 +8,6 @@
 !ct pet
 ; switches
 ;P500	= 1
-;TEST	= 1		;***** test directly write to kernal keybuffer *****
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -922,29 +921,6 @@ as340:  dex	     	;subtract 2 from 'diff' for instr
 	ldy length	;set index to length
 	bne as420	;branch always
 
-!ifdef TEST{ 
-aerr:	jmp error
-
-;  test char in .a with char in hulp
-;
-tst2:	jsr tstrx	;test for '00' (do two tests)
-
-tstrx:	stx sxreg
-	ldx temp	;get current position
-	cmp hulp,x	;same char
-	beq tst10	;yes-skip
-	pla	     	;pull jsr off stack
-	pla
-
-tst05:	inc wrap	;try next trial
-	beq aerr	;=0 tried all,sorry
-	jmp as110
-
-tst10:	inc temp
-	ldx sxreg	;restore x
-	rts
-}
-
 as400:	lda t0-1,y      ;no-put byte out there
 
 as420:	jsr stash
@@ -962,60 +938,6 @@ as500: 	lda wrap	;get good op code
 	lda length
 	jsr addt2	;update address
 
-!ifdef TEST{
-	lda #<keyd
-	sta ptr		;set ptr to kernal keyboard buffer
-	lda #>keyd
-	sta ptr+1
-	lda i6509	;remember ibank
-	sta tmpbnk
-	lda #irom
-	sta i6509	;switch to system bank
-
-	ldy #$00	;init .y, makhex doesn't destroy .y !
-	lda #'a'	;set up next line with 'a bnnnn ' for convenience
-	sta (ptr),y	;put it in the keyboard buffer
-	iny
-	lda #' '	;#1
-	sta (ptr),y
-
-	iny		;#2
-	lda t2+2	;get the bank number
-	jsr makhex	;get hi byte in .a (which we'll ignore), and lo in .x
-	txa
-	sta (ptr),y
-
-	iny		;#3
-	lda t2+1	;next get mid byte of address
-	jsr makhex
-	sta (ptr),y	;..and put in buffer,
-	iny
-	txa
-	sta (ptr),y
-
-	iny		;#5
-	lda t2		;then get the low byte of address,
-	jsr makhex
-	sta (ptr),y	;..and put that in the buffer, too.
-	iny
-	txa
-	sta (ptr),y
-
-	iny		;#7
-	lda #' '	;space at the end
-	sta (ptr),y
-
-	lda #<ndx	; set pointer to kernal keybuffer index
-	sta ptr
-	ldy #$00
-	sty ptr+1
-	lda #8		; store 8 keys in buffer
-	sta (ptr),y
-
-	lda tmpbnk
-	sta i6509	; restore ibank
-	rts
-} else{
 	lda #'a'	;set up next line with 'a bnnnn ' for convenience
 	sta mkeyd	;put it in the keyboard buffer
 	lda #' '
@@ -1034,10 +956,8 @@ as500: 	lda wrap	;get good op code
 	stx mkeyd+6
 	jsr asprint	; print new assembler input line
 	nop
-}
 	jmp main
 
-!ifndef TEST{ 
 aerr:	jmp error
 
 ;  test char in .a with char in hulp
@@ -1058,7 +978,6 @@ tst05:	inc wrap	;try next trial
 tst10:	inc temp
 	ldx sxreg	;restore x
 	rts
-}
 
 ;***************************************************
 ;	Mini disassembler
