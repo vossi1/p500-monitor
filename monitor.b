@@ -11,19 +11,34 @@
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
+DISDEF	= 23		;bytes to disassemble by default
 } else{
 	!to "monitor.prg", cbm
 	!initmem $ff
+DISDEF	= 20		;bytes to disassemble by default
 }
 ; constants
-irom	= $f		; System bank
+
+irom	= $f		;System bank
 cr	= $0d
 esc	= $1b
 ; -------------------------------------------------------------------------------------------------
 ; zero page stuff
-i6509	= $01		; 6509 indirect bank reg
+i6509	= $01		;6509 indirect bank reg
 
-pcb	= $02		;in basic's area
+;only in bank 15
+ndx	= $d1		;kernal keyboard buffer index
+keyd	= $03ab		;10by kernal keyboard buffer
+
+; used by monitor-kernal
+tmpbnk	= $30		;temporaray ibank storage
+;tpiptr	= $41		;pointer to TPI
+;ipoint	= $ac		;tx routine usage
+;lstp	= $ce		;Screen editor start position
+;lsxp	= $cf		;Screen editor start row
+
+; monitor zp
+pcb	= $02		;shadow regs
 pch	= $03
 pcl	= $04
 flgs	= $05
@@ -40,10 +55,13 @@ t1	= $63		;3by pointer
 t2	= $66		;3by pointer
 
 txtptr	= $7a
+verck	= $93		;verify flag
+mode	= $d7		;40/80 column mode
 
-;kernal definitions
+; kernal definitions - shadows of bank 15 
 fnadr	= $90		;3by Address of file name string
 			;  low, high, bank
+; $93-$95 not used
 eal	= $96		;3by End of load/save
 eah	= $97		;  low, high, bank
 eas	= $98
@@ -54,25 +72,18 @@ status	= $9c		;I/O operation status
 fnlen	= $9d		;File name length
 fa	= $9f		;Current first address
 sa	= $a0		;Current secondary address
-
-verck	= $93		;verify flag
-mode	= $d7		;40/80 column mode
-
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
 
-bad	= $0100		;fbuffr
-buf	= $0200		;input buffer
+!ifndef P500{bad=$0100}	;fbuffr
+buf	= $0200		;160by input buffer
 
-stavec	= $2af+10	;'stash' indirect
-cmpvec	= $2be+10	;'cmpare' indirect
-
-keyd	= $034a		;keyboard buffer
-xcnt	= $0380		;compare buffer
-hulp	= $03a0
-format	= $03aa
+mkeyd	= $034a		;10by monitor keyboard buffer
+xcnt	= $0380		;32by compare buffer
+hulp	= $03a0		;10by buffer
+format	= $03aa		;asm
 length	= $03ab		;asm/dis
-msal	= $03ac		;for assembler
+msal	= $03ac		;3by for assembler
 sxreg	= $03af		;1 byte temp used all over
 wrap	= $03b1		;1 byte temp for assembler
 xsave	= $03b2		;save .x here during indirect subroutine calls
@@ -80,7 +91,7 @@ dir	= $03b3		;direction indicator for 'transfer'
 count	= $03b4		;parse number conversion
 number	= $03b5		;parse number conversion
 shift	= $03b6		;parse number conversion
-temps	= $03b7
+temps	= $03b7		;3 temp bytes
 ; -------------------------------------------------------------------------------------------------
 ; system entrys
 primm	= $ff3f		;print message routine
@@ -127,8 +138,14 @@ cpyregs:pla		;pull pc, registers & status off stack...
 	bmi start
 ; $e021
 call:			;////// entry for 'jmp' or 'sys'
-	jsr setmod	; set 40/80 col mode, enable bell if cbm2
+!ifdef P500{
 	lda #$00
+	sta mode	; set 40 column mode
+	nop
+} else{
+	jsr setmod	; set 40/80 col mode, disable bell for m-command if b-machine
+	lda #$00
+}
 	sta acc		;clear everything up for user
 	sta xr
 	sta yr
@@ -289,30 +306,32 @@ cmdtbl:
 	!word assem-1
 	!word setmem-1
 	!word setreg-1
-; $e11a
-fetch:	jsr ++
-	lda (t2),y
-	jmp +
-stash:	jsr ++
-	sta (t2),y
-+	ldx $30
+
+; $e11a crossbank subroutines
+fetch:	jsr swbnk
+	lda (t2),y	;get byte 
+	jmp restbnk
+
+stash:	jsr swbnk
+	sta (t2),y	;put byte
+restbnk:ldx tmpbnk	;restore ibank
 	stx i6509
-	ldx xsave
+	ldx xsave	;restore .x! 
 	rts
 
-++	stx xsave
+swbnk:	stx xsave	;save .x!
 	ldx i6509
-	stx $30
-	ldx t2+2
+	stx tmpbnk	;remember ibank
+	ldx t2+2	;set up bank
 	stx i6509
 	rts
 
-le13b:	ldx i6509
+getstat:ldx i6509	;remember ibank
 	lda #irom
-	sta i6509
+	sta i6509	; switch to system bank
 	ldy #status
-	lda (ptr),y
-	stx i6509
+	lda (ptr),y	; get status
+	stx i6509	; restore ibank
 	rts
 ;********************************************
 ;	Display memory command
@@ -583,7 +602,12 @@ hunnxch:sta xcnt,y
 	bne hunnxch	;no-get more
 	beq hunstrt	;yes-go look for it
 
-hunhex	sty bad		;zero for rdob
+hunhex:	
+!ifdef P500{
+	nop:nop:nop
+} else{
+	sty bad		;zero for rdob
+}
 	jsr pargot	;finish hex read
 
 hunnxhx:lda t0
@@ -909,22 +933,22 @@ as500: 	lda wrap	;get good op code
 	jsr addt2	;update address
 
 	lda #'a'	;set up next line with 'a bnnnn ' for convenience
-	sta keyd	;put it in the keyboard buffer
+	sta mkeyd	;put it in the keyboard buffer
 	lda #' '
-	sta keyd+1
-	sta keyd+7
+	sta mkeyd+1
+	sta mkeyd+7
 	lda t2+2	;get the bank number
 	jsr makhex	;get hi byte in .a (which we'll ignore), and lo in .x
-	stx keyd+2
+	stx mkeyd+2
 	lda t2+1	;next get mid byte of address
 	jsr makhex
-	sta keyd+3	;..and put in buffer,
-	stx keyd+4
+	sta mkeyd+3	;..and put in buffer,
+	stx mkeyd+4
 	lda t2		;then get the low byte of address,
 	jsr makhex
-	sta keyd+5	;..and put that in the buffer, too.
-	stx keyd+6
-	jsr leb87		; *******signal that we put 8 char's in the buffer
+	sta mkeyd+5	;..and put that in the buffer, too.
+	stx mkeyd+6
+	jsr asprint		; *******signal that we put 8 char's in the buffer
 	nop
 	jmp main
 
@@ -951,7 +975,7 @@ disasm:
 	jsr t0tot2
 	jsr parse
 	bcc le5a9
-le5a3:  lda #$14
+le5a3:  lda #DISDEF
 	sta t0
 	bne le5ae
 le5a9:  jsr sub0m2
@@ -1683,17 +1707,13 @@ leb66:  jsr crlf
 	ldy #$02
 	bne leb2f
 
+!ifndef P500{
 setmod:
-!ifdef P500{
-	lda #$00
-	sta mode
-	rts
-} else{
 	lda hw_irq
 	cmp #$00
 	bne +
 	lda #$ff
-	!byte $2c	; skik next
+	!byte $2c	; skip next
 +	lda #$00
 	sta mode
 	jsr primm
@@ -1701,25 +1721,28 @@ setmod:
 	rts
 }
 *= $eb87
-leb87:  lda #$ab
-	sta ptr
-	lda #$03
+; $eb87	outsourced from assem - copy new line to kernal keyboard buffer
+asprint:lda #<keyd
+	sta ptr		; set ptr to kernal keyboard buffer
+	lda #>keyd
 	sta ptr+1
-	ldx i6509
+	ldx i6509	; remember ibank
 	lda #irom
-	sta i6509
-	ldy #$07
-leb97:  lda keyd,y
-	sta (ptr),y
+	sta i6509	; switch to system bank
+
+	ldy #7		; 8 chars
+asprtlp:lda mkeyd,y	; get from monitor key buffer
+	sta (ptr),y	; copy one char to kernal buffer
 	dey
-	bpl leb97
-	lda #$d1
+	bpl asprtlp
+
+	lda #<ndx	; set pointer to kernal keybuffer index
 	sta ptr
-	ldy #$00
+	ldy #0
 	sty ptr+1
-	lda #$08
+	lda #8		; store 8 keys in buffer
 	sta (ptr),y
-	stx i6509
+	stx i6509	; restore ibank
 	rts
 ; $ebae	setp load/save
 lsinit:	
@@ -1759,7 +1782,7 @@ fparlp:	lda $0000,y
 	stx i6509	; restore ibank
 	rts
 ; $ebed
-lebed:  jsr le13b
+lebed:  jsr getstat
 	and #$10
 	bne lebff
 	jsr primm
