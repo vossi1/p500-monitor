@@ -9,6 +9,7 @@
 !to "kernal.prg", cbm
 !initmem $00
 ; switches
+TEST=1
 ; BASIC: 600/700 = POKE 65098,123 / default P500 POKE 65098,130
 ; constants
 irom	= $f		; System bank
@@ -100,6 +101,32 @@ iprimm:				; print monitor message
 	pha
 	tya
 	pha
+!ifdef TEST{
+	ldy #1
+	ldx i6509
+	stx tmpbnk		; remember ibank
+	ldx e6509
+	stx i6509		; switch to system bank
+	tsx
+	lda stack+4,x	
+	sta ptr
+	lda stack+5,x	
+	sta ptr+1
+msglp:	lda(ptr),y
+	beq msgend
+	jsr bsout
+	iny
+	bne msglp
+msgend:	tya
+	clc
+	adc ptr
+	sta stack+4,x
+	lda #0
+	adc ptr+1
+	sta stack+5,x
+	ldx tmpbnk		; restore bank
+	stx i6509
+} else{
 	ldy #0
 	ldx i6509
 	stx tmpbnk		; remember ibank
@@ -119,6 +146,7 @@ msglp:	tsx
 	bcc msglp
 msgend:	ldx tmpbnk		; restore bank
 	stx i6509
+}
 	pla
 	tay
 	pla
