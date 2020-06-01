@@ -3,11 +3,12 @@
 ; comments+labels vossi 05/2020
 ; P500 patches vossi 05/2020
 ; fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d, 1by diff to org
-; fix02 change 4x fa in assembler to temp, total 5by diff to org 
+; fix02 change 4x fa in assembler to temp, total 5by diff to org
+; TODO: disk does not work - 4x fnadr instead of status
 !cpu 6502
 !ct pet
 ; switches
-;P500	= 1
+P500	= 1
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -1766,8 +1767,11 @@ dskchlp:jsr basin	;get a character from disk
 	jsr bsout	;print it
 	cmp #cr
 	beq disk_done	;...branch if eol
+!ifdef P500{
+	jsr getstat2
+} else{
 	lda fnadr
-;	lda status
+}
 	and #$bf	;strip eoi bit
 	beq dskchlp	;...loop until error or eol
 
@@ -1810,13 +1814,19 @@ dirchlp:iny
 dirlp:  sty t1		;loop counter
 dirbklp:jsr basin
 	sta t0		;get # blocks low
+!ifdef P500{
+	jsr getstat2
+} else{
 	lda fnadr
-;	lda status
+}
 	bne disk_done	;...branch if error
 	jsr basin
 	sta t0+1	;get # blocks high
+!ifdef P500{
+	jsr getstat2
+} else{
 	lda fnadr
-;	lda status
+}
 	bne disk_done	;...branch if error
 	dec t1
 	bne dirbklp	;...loop until done
@@ -1831,9 +1841,15 @@ dirbklp:jsr basin
 
 dirfnlp:jsr basin	;read & print filename & filetype
 	beq direol	;...branch if eol
-	ldx fnadr
-;	ldx status
+!ifdef P500{
+	pha
+	jsr getstat2
 	bne disk_done	;...branch if error
+	pla
+} else{
+	ldx fnadr
+	bne disk_done	;...branch if error
+}
 	jsr bsout
 	bcc dirfnlp	;...loop always
 
@@ -1973,6 +1989,25 @@ goto:
 	ldx xr
 	ldy yr
 	jmp (t0)
+
+!ifdef P500{
+getstat2:
+	txa
+	pha
+	tya
+	pha
+	ldx i6509	;remember ibank
+	lda #irom
+	sta i6509	;switch to system bank
+	ldy #status
+	lda (ptr),y	;get status
+	stx i6509	;restore ibank
+	pla
+	tay
+	pla
+	tax
+	rts
+}
 !ifndef P500{
 *= $efff
 	!byte $ff
