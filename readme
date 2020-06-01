@@ -13,3 +13,4 @@ fix02 change 4x fa in assembler to temp
 Kernal:
 fix01 changed ptr to same address in monitor
 fix02 default p500 irq - changeable by basic poke, reset+nmi vector to monitor break
+fix03 permanently changed primm to faster routine

@@ -4,12 +4,13 @@
 ; P500 patches vossi 05/2020
 ; fix01 changed ptr to same address in monitor
 ; fix02 default p500 irq - changeable by basic poke, reset+nmi vector to monitor break
+; fix03 permanently changed primm to faster routine
 !cpu 6502
 !ct pet
 !to "kernal.prg", cbm
 !initmem $00
 ; switches
-TEST=1
+
 ; BASIC: 600/700 = POKE 65098,123 / default P500 POKE 65098,130
 ; constants
 irom	= $f		; System bank
@@ -58,23 +59,23 @@ irq:	pha			; save regs
 	tsx
 	lda stack+4,x		; check break flag
 	and #$10
-	beq +
+	beq nobrk
 	jmp mbreak		; jump to monitor break entry
-+	lda i6509
+nobrk:	lda i6509
 	pha			; save ibank
 	cld
 	ldy #0
 	lda #irom
 	sta i6509		; switch to systembank
 	lda (tpiptr),y		; and load TPI interrupt reg
-	beq ++			; skip if no irq
+	beq noirq			; skip if no irq
 	and #$1e
-	bne +			; skip if not 50/60Hz irq
-	jsr intirq
-	jsr extirq
-+	ldy #0
+	bne nothz		; skip if not 50/60Hz irq
+	jsr monirq
+	jsr timirq
+nothz:	ldy #0
 	sta (tpiptr),y		; clear interrupt
-++	pla
+noirq:	pla
 	sta i6509		; restore ibank, regs
 	pla
 	tay
@@ -82,77 +83,56 @@ irq:	pha			; save regs
 	tax
 	pla
 	rti
-
-intirq:	lda #>mirq+2		; call monitor irq
+; $fe3d
+monirq:	lda #>mirq+2		; call monitor irq
 	pha
 	lda #<mirq+2
 	pha
 	jmp exnmi
-
-extirq:	lda #>udtime+2		; call system timer irq
+; $fe46
+timirq:	lda #>udtime+2		; call system timer irq
 	pha
-	lda #<udtime+2
+	lda #<udtime+2		; operand $fe4a = 65098
 	pha
 	jmp exnmi
-
-iprimm:				; print monitor message
+; $fe4f
+iprimm:				; print immediate (missing in cbm2/p500 kernal)
 	pha			; ...zero-terminated text behind jsr
 	txa
 	pha
 	tya
 	pha
-!ifdef TEST{
-	ldy #1
 	ldx i6509
 	stx tmpbnk		; remember ibank
 	ldx e6509
 	stx i6509		; switch to system bank
 	tsx
-	lda stack+4,x	
-	sta ptr
-	lda stack+5,x	
+	ldy #1			; set index to return address +1 for text
+	lda stack+4,x		; get return address from stack
+	sta ptr			; save to pointer
+	lda stack+5,x
 	sta ptr+1
-msglp:	lda(ptr),y
-	beq msgend
-	jsr bsout
+msglp:	lda(ptr),y		; load char
+	beq msgend		; exit if null
+	jsr bsout		; print char
 	iny
-	bne msglp
-msgend:	tya
+	bne msglp		; next char, exit after max. 255 bytes
+msgend:	tya			; get index of null byte
 	clc
-	adc ptr
-	sta stack+4,x
+	adc ptr			; add pointer
+	sta stack+4,x		; store new return address to stack
 	lda #0
 	adc ptr+1
 	sta stack+5,x
-	ldx tmpbnk		; restore bank
+	ldx tmpbnk		; restore ibank
 	stx i6509
-} else{
-	ldy #0
-	ldx i6509
-	stx tmpbnk		; remember ibank
-	ldx e6509
-	stx i6509		; switch to system bank
-msglp:	tsx
-	inc stack+4,x		; increase return address of jsr primm to get text address
-	bne +
-	inc stack+5,x		; inc hi
-+	lda stack+4,x
-	sta ptr			; set pointer to char address
-	lda stack+5,x
-	sta ptr+1
-	lda (ptr),y		; load char 
-	beq msgend
-	jsr bsout
-	bcc msglp
-msgend:	ldx tmpbnk		; restore bank
-	stx i6509
-}
 	pla
 	tay
 	pla
 	tax
 	pla
 	rts
+; $fe8b
 ; -------------------------------------------------------------------------------------------------
 *= $fe9d
 ; ##### transx #####
