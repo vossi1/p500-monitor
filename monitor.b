@@ -8,7 +8,7 @@
 !cpu 6502
 !ct pet
 ; switches
-P500	= 1
+;P500	= 1
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -1715,6 +1715,11 @@ binskzr:dex
 ;	@[device-number][,command-string]
 ;********************************************
 disk:
+!ifdef P500{
+	ldy #$00
+	sty ptr		; init pointer for status
+	sty ptr+1
+}
 	bne dskdev		;...branch if given device #
 	ldx #8		;default device number
 	!byte $2c	; skip next
@@ -1769,11 +1774,17 @@ dskchlp:jsr basin	;get a character from disk
 	beq disk_done	;...branch if eol
 !ifdef P500{
 	jsr getstat2
+	lda status
 } else{
 	lda fnadr
 }
 	and #$bf	;strip eoi bit
 	beq dskchlp	;...loop until error or eol
+
+!ifdef P500{
+disk_err:
+	jmp error
+}
 
 disk_done:
 	jsr clrch
@@ -1782,8 +1793,10 @@ disk_done:
 	jsr close
 	jmp main
 
+!ifndef P500{
 disk_err:
 	jmp error
+}
 
 disk_dir:
 	ldy #$ff	;determine directory string length
@@ -1816,6 +1829,7 @@ dirbklp:jsr basin
 	sta t0		;get # blocks low
 !ifdef P500{
 	jsr getstat2
+	lda status
 } else{
 	lda fnadr
 }
@@ -1824,6 +1838,7 @@ dirbklp:jsr basin
 	sta t0+1	;get # blocks high
 !ifdef P500{
 	jsr getstat2
+	lda status
 } else{
 	lda fnadr
 }
@@ -1842,10 +1857,9 @@ dirbklp:jsr basin
 dirfnlp:jsr basin	;read & print filename & filetype
 	beq direol	;...branch if eol
 !ifdef P500{
-	pha
 	jsr getstat2
+	ldx status
 	bne disk_done	;...branch if error
-	pla
 } else{
 	ldx fnadr
 	bne disk_done	;...branch if error
@@ -1992,6 +2006,7 @@ goto:
 
 !ifdef P500{
 getstat2:
+	pha
 	txa
 	pha
 	tya
@@ -2001,11 +2016,13 @@ getstat2:
 	sta i6509	;switch to system bank
 	ldy #status
 	lda (ptr),y	;get status
+	sta status
 	stx i6509	;restore ibank
 	pla
 	tay
 	pla
 	tax
+	pla
 	rts
 }
 !ifndef P500{
