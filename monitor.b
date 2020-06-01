@@ -5,9 +5,12 @@
 ; fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d, 1by diff to org
 ; fix02 change 4x fa in assembler to temp, total 5by diff to org
 ; fix03 jump to goto was 2 bytes too short - one extra pha in go command! 
-; TODO: disk does not work - 4x fnadr instead of status
 !cpu 6502
 !ct pet
+; ########################################### TODO ################################################
+; Disk does not work - 4x fnadr instead of status
+; gosub works only to same bank or bank 15	
+; -------------------------------------------------------------------------------------------------
 ; switches
 ;P500	= 1
 !ifdef P500{
