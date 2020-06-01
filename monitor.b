@@ -1275,7 +1275,7 @@ parok:	clc		;clear .c for not-eol
 ;	.z=1  null input
 ;	.x & .y are preserved.
 ; $e7cf
-eval:	lda #$00
+eval:	lda #0
 	sta t0		;clear value
 	sta t0+1
 	sta t0+2
@@ -1285,60 +1285,60 @@ eval:	lda #$00
 	tya
 	pha
 
-le7dd:  jsr gnc		;get next character
-	bne le7e5
+evlspc:	jsr gnc		;get next character
+	bne evnoeol
 	jmp eval_ok	;...branch if end of line
-le7e5:  cmp #$20
-	beq le7dd	;...branch & ignore leading spaces
+evnoeol:cmp #' '
+	beq evlspc	;...branch & ignore leading spaces
 
-	ldx #$03
-le7eb:  cmp cmdnum,x	;is first character a base prefix?
-	beq le7f6	;...yes
+	ldx #3
+evprelp:cmp cmdnum,x	;is first character a base prefix?
+	beq evbase	;...yes
 	dex
-	bpl le7eb
+	bpl evprelp
 
 	inx		;...no: default base to hex
 	dec txtptr	;to reget digit
 
-le7f6:  ldy bases,x	;this is the base
+evbase:	ldy bases,x	;this is the base
 	lda shifts,x	;this is the # of shifts required for given base
 	sta shift
 
-le7ff:  jsr gnc		;get next character
+evnxchr:jsr gnc		;get next character
 	beq eval_ok	;...branch if eol
 	sec
 	sbc #'0'	;convert ascii digit to binary value
 	bcc eval_ok	;...branch if not a number  (assume delimiter)
 	cmp #10
-	bcc le813		;...number 0-9
+	bcc evnumbr		;...number 0-9
 	sbc #7
 	cmp #16		;...number a-f
 	bcs eval_ok	;...branch if not a number  (assume delimiter)
 
-le813:  sta number	;binary value of current digit
+evnumbr:sta number	;binary value of current digit
 	cpy number
 	bcc eval_ng	;...branch if number out of range of given base
 	beq eval_ng
 	inc count	;flag valid digit
 	cpy #10
-	bne le82e	;...branch if not base-10
+	bne evshift	;...branch if not base-10
 
-	ldx #$02
-le826:  lda t0,x	;save a copy current total for base-10 calc
+	ldx #2
+evdeclp:lda t0,x	;save a copy current total for base-10 calc
 	sta temps,x
 	dex
-	bpl le826
+	bpl evdeclp
 
-le82e:  ldx shift
-le831:  asl t0		;multiply current value by base using binary shifts
+evshift:ldx shift
+evshflp:asl t0		;multiply current value by base using binary shifts
 	rol t0+1
 	rol t0+2
 	bcs eval_ng	;...branch if overflow error
 	dex
-	bne le831	;...next shift
+	bne evshflp	;...next shift
 
 	cpy #10
-	bne le862	;...branch if not base-10
+	bne evaddig	;...branch if not base-10
 
 	asl temps	;more base-10 calc: first one more shift
 	rol temps+1
@@ -1355,7 +1355,7 @@ le831:  asl t0		;multiply current value by base using binary shifts
 	sta t0+2
 	bcs eval_ng	;...overflow
 
-le862:  clc		;add current digit (all bases)
+evaddig:clc		;add current digit (all bases)
 	lda number
 	adc t0
 	sta t0
@@ -1368,7 +1368,7 @@ le862:  clc		;add current digit (all bases)
 	bcs eval_ng	;...overflow
 	and #$f0
 	bne eval_ng	;...overflow
-	beq le7ff	;...next character
+	beq evnxchr	;...next character
 
 eval_ng:
 	sec
@@ -1468,7 +1468,8 @@ t0tot2: lda t0
 	sta t2+2
 	rts
 
-sub0m2:  sec
+;  subtract t2 from t0, result in t0
+sub0m2:	sec
 	lda t0
 	sbc t2
 	sta t0
@@ -1477,11 +1478,11 @@ sub0m2:  sec
 	sta t0+1
 	lda t0+2
 	sbc t2+2
-	sta t0+2
+	sta t0+2	;note .c=0 indicates t0 < t2, thus t0 is negative!
 	rts
 ;  decrement t0
 ; $e922
-dect0:  lda #$01
+dect0:  lda #1
 
 subt0:  sta sxreg	;subtract .a from t2
 	sec
@@ -1489,286 +1490,358 @@ subt0:  sta sxreg	;subtract .a from t2
 	sbc sxreg
 	sta t0
 	lda t0+1
-	sbc #$00
+	sbc #0
 	sta t0+1
 	lda t0+2
-	sbc #$00
+	sbc #0
 	sta t0+2
 	rts
 
+;  decrement t1
 dect1:  sec
 	lda t1
-	sbc #$01
+	sbc #1
 	sta t1
 	lda t1+1
-	sbc #$00
+	sbc #0
 	sta t1+1
 	lda t1+2
-	sbc #$00
+	sbc #0
 	sta t1+2
 	rts
 
-inct2:  lda #$01
+; increment t2
+inct2:  lda #1
 
-addt2:  clc
+addt2:  clc	      	;add .a to t2
 	adc t2
 	sta t2
-	bcc le95f
+	bcc addt2x
 	inc t2+1
-	bne le95f
+	bne addt2x
 	inc t2+2
-le95f:  rts
+addt2x:	rts
 
+;  decrement t2
 dect2:  sec
 	lda t2
-	sbc #$01
+	sbc #1
 	sta t2
 	lda t2+1
-	sbc #$00
+	sbc #0
 	sta t2+1
 	lda t2+2
-	sbc #$00
+	sbc #0
 	sta t2+2
 	rts
 
-t0topc:	bcs le982
+; copy t0 to pc registers
+t0topc:	bcs t0topcx	;no arg given, just exit
 	lda t0
 	ldy t0+1
 	ldx t0+2
 	sta pcl
 	sty pch
 	stx pcb
-le982:  rts
+t0topcx:rts
 
-range:  bcs +
-	jsr t0tot2
-	jsr parse
-	bcs +
-	lda t0
+;  read a range - put sa in t2, count in t1   (save ea in 'temps')
+;
+;  returns .c=0 if okay, .c=1 if error (missing parameter or sa < ea)
+range:  bcs rangex	;...branch if missing sa
+	jsr t0tot2	;move sa from t0 to t2
+	jsr parse	;get ea
+	bcs rangex	;...branch if missing ea
+
+	lda t0		;save ea (for 'transfer' cmd)
 	sta temps
 	lda t0+1
 	sta temps+1
 	lda t0+2
 	sta temps+2
-	jsr sub0m2
-	lda t0
+
+	jsr sub0m2	;calculate length = ea - sa  (.c=0 if sa<ea)
+
+	lda t0	   	;move length from t0 to t1
 	sta t1
 	lda t0+1
 	sta t1+1
 	lda t0+2
 	sta t1+2
-	bcc +
-	clc
-	!byte $24	; skip next
-+	sec
+	bcc rangex	;invert .c from subtraction above
+	clc		;good stuff exits here
+	!byte $24	;skip next
+rangex:	sec		;bad  stuff exits here
 	rts
 
+;  convert given number from its base to hex
 convert:
-	jsr pargot
+	jsr pargot	;parse number & put its value in t0
 	jsr new_line
-	lda #$24
+	lda #'$'	;print hexidecimal conversion of t0
 	jsr bsout
-	lda t0+2
-	beq le9c7
+	lda t0+2	;how big a number is it?
+	beq cvnobnk	;...branch if 'bank' nybble unnecessary
 	jsr makhex
 	txa
-	jsr bsout
-le9c7:  lda t0
+	jsr bsout	;print lsd of this byte
+cvnobnk:lda t0
 	ldx t0+1
-	jsr putwrd
+	jsr putwrd	;print hex word
+
 	jsr new_line
-	lda #$2b
+	lda #'+'	;print decimal conversion of t0
 	jsr bsout
-	jsr lea07
-	lda #$00
-	ldx #$08
-	ldy #$03
-	jsr lea5d
+	jsr bindec	;convert t0 into packed BCD in hulp
+	lda #0		;no leading zeros
+	ldx #8		;number of digits
+	ldy #3		;number of shifts-1
+	jsr unpack	;convert packed BCD in hulp to ASCII & print it
+
 	jsr new_line
-	lda #$26
+	lda #'&'	;print octal conversion of t0
 	jsr bsout
-	lda #$00
-	ldx #$08
-	ldy #$02
-	jsr lea47
+	lda #0		;no leading zeros
+	ldx #8		;number of digits
+	ldy #2		;number of shifts-1
+	jsr unpack_t0	;convert binary in hulp to ASCII & print it
+
 	jsr new_line
-	lda #$25
+	lda #'%'	;print binary conversion of t0
 	jsr bsout
-	lda #$00
-	ldx #$18
-	ldy #$00
-	jsr lea47
+	lda #0		;no leading zeros
+	ldx #24		;number of digits
+	ldy #0		;number of shifts-1
+	jsr unpack_t0	;convert binary in hulp to ASCII & print it
+
 	jmp main
 
-lea07:  jsr t0tot2
-	lda #$00
-	ldx #$07
-lea0e:  sta hulp,x
+;  convert from binary to decimal (BCD)
+;
+;	input :	binary value (3 bytes) in T0
+;	output:	decimal value (4 bytes) in HULP as packed BCD
+bindec:	
+	jsr t0tot2	;copy from T0 to T2 (lo/mid/hi)
+
+	lda #0
+	ldx #7
+bindlp: sta hulp,x	;initialize working registers
 	dex
-	bpl lea0e
-	inc hulp+7
-	ldy #$17
-	php
-	sei
-	sed
-lea1c:  lsr t2+2
-	ror t2+1
-	ror t2
-	bcc lea33
+	bpl bindlp
+	inc hulp+7	;seed value_of_bit with 1
+
+	ldy #23		;loop index (3 bytes = 24 bits)
+	php		;save caller's processor mode
+	sei		;disable IRQ's (but beware NMI's!)
+	sed		;put processor into decimal mode (for ADC's & SBC's)
+
+;  main loop. rotate bits right 1 at a time, and if
+;  set add the current value_of_bit to the sum.
+binmlp:	lsr t2+2	;hi
+	ror t2+1	;mid
+	ror t2		;lo
+	bcc binbit0	;...branch if bit not set (its value is 0)
+
 	clc
-	ldx #$03
-lea27:  lda $03a4,x
+	ldx #3
+binbtlp:lda hulp+4,x	;add current value_of_bit (decimal arithmetic)
 	adc hulp,x
 	sta hulp,x
 	dex
-	bpl lea27
-lea33:  clc
-	ldx #$03
-lea36:  lda $03a4,x
-	adc $03a4,x
-	sta $03a4,x
+	bpl binbtlp
+
+binbit0:clc
+	ldx #3
+bincalp:lda hulp+4,x	;calculate value of next bit (decimal arithmetic)
+	adc hulp+4,x
+	sta hulp+4,x
 	dex
-	bpl lea36
+	bpl bincalp
 	dey
-	bpl lea1c
-	plp
-	rts
-lea47:  pha
-	lda t0
-	sta $03a2
-	lda t0+1
-	sta $03a1
-	lda t0+2
-	sta hulp
-	lda #$00
-	sta $03a3
-	pla
-lea5d:  sta count
-	sty shift
-lea63:  ldy shift
-	lda #$00
-lea68:  asl $03a3
-	rol $03a2
-	rol $03a1
-	rol hulp
-	rol
-	dey
-	bpl lea68
-	tay
-	bne lea84
-	cpx #$01
-	beq lea84
-	ldy count
-	beq lea8c
-lea84:  inc count
-	ora #$30
-	jsr bsout
-lea8c:  dex
-	bne lea63
+	bpl binmlp	;loop until done conversion
+
+	plp		;restore processor mode
 	rts
 
+unpack_t0:
+	pha		;save .a
+	lda t0
+	sta hulp+2	;copy t0 (lo/mid/hi) to hulp (hi/mid/lo)
+	lda t0+1
+	sta hulp+1
+	lda t0+2
+	sta hulp
+	lda #0
+	sta hulp+3
+	pla		;restore .a & fall into unpack...
+
+;  unpack base encoded number, convert it to ascii & print it.
+;
+;  enter:  packed number in HULP  (hi/mid/lo)
+;	   # digits in .x,  # shifts/digit in .y
+;	   .a=0 to trim leading 0's, else .a>0 to print them.
+unpack:
+	sta count
+	sty shift
+unplp:	ldy shift	;# bits per digit, .x is digit counter
+	lda #0
+unpshlp:asl hulp+3	;lo
+	rol hulp+2	;mid lo
+	rol hulp+1	;mid hi
+	rol hulp	;hi
+	rol		;shift a digit into .a
+	dey
+	bpl unpshlp
+
+	tay		;set flags for .a
+	bne binzero
+	cpx #1
+	beq binzero	;...print zero if it's the last digit
+	ldy count
+	beq binskzr	;...else skip leading zeros
+
+binzero:inc count	;flag a non-zero digit
+	ora #$30	;make it ascii
+	jsr bsout	;print it
+
+binskzr:dex
+	bne unplp	;...loop until all digits printed
+	rts
+
+;********************************************
+;	Disk Command/Status Operations
+;
+;	@[device-number][,command-string]
+;********************************************
 disk:
-	bne +
-	ldx #$08
+	bne dskdev		;...branch if given device #
+	ldx #8		;default device number
 	!byte $2c	; skip next
-+	ldx t0
-	cpx #$04
-	bcc leb00
-	cpx #$1f
-	bcs leb00
+
+dskdev: ldx t0		;get given device #
+	cpx #4
+	bcc disk_err	;...branch if bad device #
+	cpx #31
+	bcs disk_err
 	stx t0
-	lda #$00
-	sta t0+2
+
+	lda #0
+	sta t0+2	;clear line # register (in case DIR cmd)
 	sta fnlen
 	tax
-	jsr setbnk
-	jsr gnc
-	dec txtptr
-	cmp #$24
-	beq leb03
-	lda #$00
-	ldx t0
-	ldy #$0f
+	jsr setbnk	;cmd string in in ram0 (in case DIR cmd)
+
+	jsr gnc		;peek at first character of disk command
+	dec txtptr	;backup so we will re-get this character later
+	cmp #'$'
+	beq disk_dir	;...branch if directory read
+
+;  open disk command channel & pass it given command
+	lda #0		;la
+	ldx t0		;fa
+	ldy #15		;sa
 	jsr setlfs
-	jsr open
-	bcs leaf4
-	ldx #$00
-	jsr chkout
-	bcs leaf4
-leac9:  ldx txtptr
+	jsr open	;open disk command channel
+	bcs disk_done	;...branch on error
+
+	ldx #0
+	jsr chkout	;make it an output channel
+	bcs disk_done	;...branch on error
+
+dsknxch:ldx txtptr	;get next character
 	inc txtptr
 	lda buf,x
-	beq lead7
-	jsr bsout
-	bcc leac9
-lead7:  jsr clrch
+	beq disk_st	;...branch if eol
+	jsr bsout	;xmit character to disk
+	bcc dsknxch	;...loop until error or eol
+
+disk_st
+	jsr clrch	;read & report disk status
 	jsr crlf
-	ldx #$00
-	jsr chkin
-	bcs leaf4
-leae4:  jsr basin
-	jsr bsout
-	cmp #$0d
-	beq leaf4
+	ldx #0
+	jsr chkin	;make it an input channel
+	bcs disk_done	;...branch on error
+
+dskchlp:jsr basin	;get a character from disk
+	jsr bsout	;print it
+	cmp #cr
+	beq disk_done	;...branch if eol
 	lda fnadr
-	and #$bf
-	beq leae4
-leaf4:  jsr clrch
+;	lda status
+	and #$bf	;strip eoi bit
+	beq dskchlp	;...loop until error or eol
+
+disk_done:
+	jsr clrch
 	lda #$00
 	sec
 	jsr close
 	jmp main
-leb00:  jmp error
-leb03:  ldy #$ff
+
+disk_err:
+	jmp error
+
+disk_dir:
+	ldy #$ff	;determine directory string length
 	ldx txtptr
 	dex
-leb08:  iny
+	
+dirchlp:iny
 	inx
-	lda buf,x
-	bne leb08
-	tya
-	ldx txtptr
-	ldy #$02
+	lda buf,x	;get a character
+	bne dirchlp	;...loop until eol
+	tya		;length
+	ldx txtptr	;fnadr low
+	ldy #>buf	;fnadr high
 	jsr setnam
-	lda #$00
-	ldx t0
-	ldy #t0
+	lda #0		;la
+	ldx t0		;fa
+	ldy #$60	;sa
 	jsr setlfs
-	jsr open
-	bcs leaf4
-	ldx #$00
-	jsr chkin
+	jsr open	;open directory channel
+	bcs disk_done	;...branch on error
+	ldx #0
+	jsr chkin	;make it an input channel
+
 	jsr crlf
-	ldy #$03
-leb2f:  sty t1
-leb31:  jsr basin
-	sta t0
+
+	ldy #3		;first pass only- trash first two bytes read
+
+dirlp:  sty t1		;loop counter
+dirbklp:jsr basin
+	sta t0		;get # blocks low
 	lda fnadr
-	bne leaf4
+;	lda status
+	bne disk_done	;...branch if error
 	jsr basin
-	sta t0+1
+	sta t0+1	;get # blocks high
 	lda fnadr
-	bne leaf4
+;	lda status
+	bne disk_done	;...branch if error
 	dec t1
-	bne leb31
-	jsr lea07
-	lda #$00
-	ldx #$08
-	ldy #$03
-	jsr lea5d
-	lda #$20
-	jsr bsout
-leb58:  jsr basin
-	beq leb66
+	bne dirbklp	;...loop until done
+
+	jsr bindec	;convert # blocks to decimal
+	lda #0		;no leading zeros
+	ldx #8		;max digits
+	ldy #3		;required # shifts for decimal value
+	jsr unpack	;print # blocks
+	lda #' '
+	jsr bsout	;print space  (to match loaded directory display)
+
+dirfnlp:jsr basin	;read & print filename & filetype
+	beq direol	;...branch if eol
 	ldx fnadr
-	bne leaf4
+;	ldx status
+	bne disk_done	;...branch if error
 	jsr bsout
-	bcc leb58
-leb66:  jsr crlf
+	bcc dirfnlp	;...loop always
+
+direol:	jsr crlf	;start a new line
 	jsr stop
-	beq leaf4
-	ldy #$02
-	bne leb2f
+	beq disk_done	;...branch if user hit STOP
+	ldy #2
+	bne dirlp	;...loop always
 
 !ifdef P500{
 ;!fill 21, $ff
