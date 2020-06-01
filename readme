@@ -9,6 +9,7 @@ Necessary:
 
 fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d
 fix02 change 4x fa in assembler to temp
+fix03 jump to goto was 2 bytes too short - one extra pha in go command! 
 
 Kernal:
 fix01 changed ptr to same address in monitor

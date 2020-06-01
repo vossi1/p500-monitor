@@ -4,6 +4,7 @@
 ; P500 patches vossi 05/2020
 ; fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d, 1by diff to org
 ; fix02 change 4x fa in assembler to temp, total 5by diff to org
+; fix03 jump to goto was 2 bytes too short - one extra pha in go command! 
 ; TODO: disk does not work - 4x fnadr instead of status
 !cpu 6502
 !ct pet
@@ -430,7 +431,7 @@ setmx:	jsr primm	;clear all modes & cursor up
 ;	Go command- start executing at either the supplied address,
 ;	   or (default) the current contents of the PC reg
 ;********************************************************************
-; $e1d6
+; $e1d6 go jumps only to same bank !!!
 go:
 	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
 
@@ -1964,45 +1965,48 @@ lssterr:jsr primm
 ;	   return is to monitor 'main' loop.
 ;********************************************************************
 gosub:
-	jsr t0topc
+	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
 	lda pcb
-	cmp $00
-	beq lec3a
-	jsr lec1b
+	cmp e6509
+	beq gosmbnk	;branch if adrress is in monitor bank
+	jsr gofobnk	;gosub foreign bank
 	jmp main
-lec1b:  sei
+
+gofobnk:sei		;disable interrrupts
 	clc
 	lda pcl
-	adc #$02
+	adc #$02	;load address and add +2
 	tax
 	lda pch
-	adc #$00
-	pha
+	adc #$00	;add hi
+	pha		;push target +2 to stack
 	txa
 	pha
-	lda flgs
+	lda flgs	;push regs to stack
 	pha
 	lda pcb
-	sta i6509
+	sta i6509	;set bank
 	lda acc
 	ldx xr
 	ldy yr
 	pha
-	jmp exsub3
-lec3a:  lda #$e0
+	jmp exsub3	;jump to address in foreign bank
+
+gosmbnk:
+	lda #>(main-1)	;store main as return address
 	pha
-	!byte $a9	;lda #$8a
-goto:	
-	txa
+	lda #<(main-1)
 	pha
+; goto routine continued
+goto:
 	lda pch
-	sta t0+1
+	sta t0+1	;store address to t0
 	lda pcl
 	sta t0
-	lda acc
+	lda acc		;load shadow regs
 	ldx xr
 	ldy yr
-	jmp (t0)
+	jmp (t0)	;jump to address
 
 !ifdef P500{
 getstat2:
