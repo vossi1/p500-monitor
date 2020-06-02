@@ -12,8 +12,8 @@
 ; gosub works only to same bank or bank 15	
 ; -------------------------------------------------------------------------------------------------
 ; switches
-;P500	= 1
-;OPTI	= 1	; optimizations
+P500	= 1
+OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -674,7 +674,11 @@ hunerr:	jmp error
 lodsav:
 	jsr lsinit	;init defaults
 lsspc:  jsr gnc		;look for name
+!ifdef OPTI{
+	beq lserr	;cbm2 non-tape system has no load without name
+} else{
 	beq lsload	;branch if no name (must be default load)
+}
 	cmp #' '
 	beq lsspc	;skip spaces
 	cmp #$22	;quote
