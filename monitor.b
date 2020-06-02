@@ -13,14 +13,24 @@
 ; -------------------------------------------------------------------------------------------------
 ; switches
 ;P500	= 1
+;OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
-DISDEF	= 23		;bytes to disassemble by default
 } else{
 	!to "monitor.prg", cbm
 	!initmem $ff
+}
+!ifdef OPTI{
+DISDEF	= 23		;bytes to disassemble by default
+DEFDEV 	= 8		;default device	
+} else{
 DISDEF	= 20		;bytes to disassemble by default
+}
+!ifdef P500{
+DEFBANK	= 0		;if no address, load to this bank 
+} else{
+DEFBANK	= 1
 }
 ; constants
 
@@ -83,7 +93,7 @@ sa	= $a0		;Current secondary address
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
 
-!ifndef P500{bad=$0100}	;fbuffr
+!ifndef OPTI{bad=$0100}	;fbuffr
 buf	= $0200		;160by input buffer
 
 mkeyd	= $034a		;10by monitor keyboard buffer
@@ -341,7 +351,7 @@ getstat:ldx i6509	;remember ibank
 	lda (ptr),y	; get status
 	stx i6509	; restore ibank
 	rts
-!ifndef P500{
+!ifndef OPTI{
 !fill 10,$ff
 }
 ;********************************************
@@ -613,7 +623,7 @@ hunnxch:sta xcnt,y
 	beq hunstrt	;yes-go look for it
 
 hunhex:	
-!ifdef P500{
+!ifdef OPTI{
 ;!fill 3, $ff
 } else{
 	sty bad		;zero for rdob
@@ -675,15 +685,15 @@ lsnxchr:lda buf,x	;get chr
 	beq lsload	;eol, must be load
 	inx
 	cmp #$22	;pass everything up to closing quote
-	beq lsgo
-	sta (fnadr),y	;okay- always bank 0
+	beq lsdev
+	sta (fnadr),y	;okay- always monitor bank
 	inc fnlen
 	iny
 	cpy #17		;check length of name (16 max.)
 	bcc lsnxchr
 lserr:  jmp error
 
-lsgo:	stx txtptr
+lsdev:	stx txtptr
 	jsr gnc		;trash delimitor
 	beq lsload	;...eol, use default
 	jsr parse	;get device #
@@ -718,6 +728,10 @@ lsadrcp:lda t2,x
 lsload: ldx #$ff
 	stx t2		;load to saved address
 	stx t2+1
+!ifdef OPTI{
+	ldx #DEFBANK
+	stx t2+2	;default bank
+}
 loadadr:lda #$00	;flag 'non-default load'
 	sta sa
 	jsr fparcpy	;copy file parameter to system bank
@@ -738,7 +752,7 @@ verify	lda #$80	;flag for verify
 ;******************************************************************
 ;	Fill command - F starting-address ending-address value
 ;******************************************************************
-!ifndef P500{
+!ifndef OPTI{
 !fill 16, $ff
 }
 ; $e3db
@@ -1719,7 +1733,7 @@ binskzr:dex
 ;	@[device-number][,command-string]
 ;********************************************
 disk:
-!ifdef P500{
+!ifdef OPTI{
 	ldy #$00
 	sty ptr		; init pointer for status
 	sty ptr+1
@@ -1776,7 +1790,7 @@ dskchlp:jsr basin	;get a character from disk
 	jsr bsout	;print it
 	cmp #cr
 	beq disk_done	;...branch if eol
-!ifdef P500{
+!ifdef OPTI{
 	jsr getstat2
 	lda status
 } else{
@@ -1785,7 +1799,7 @@ dskchlp:jsr basin	;get a character from disk
 	and #$bf	;strip eoi bit
 	beq dskchlp	;...loop until error or eol
 
-!ifdef P500{
+!ifdef OPTI{
 disk_err:
 	jmp error
 }
@@ -1797,7 +1811,7 @@ disk_done:
 	jsr close
 	jmp main
 
-!ifndef P500{
+!ifndef OPTI{
 disk_err:
 	jmp error
 }
@@ -1831,7 +1845,7 @@ dirchlp:iny
 dirlp:  sty t1		;loop counter
 dirbklp:jsr basin
 	sta t0		;get # blocks low
-!ifdef P500{
+!ifdef OPTI{
 	jsr getstat2
 	lda status
 } else{
@@ -1840,7 +1854,7 @@ dirbklp:jsr basin
 	bne disk_done	;...branch if error
 	jsr basin
 	sta t0+1	;get # blocks high
-!ifdef P500{
+!ifdef OPTI{
 	jsr getstat2
 	lda status
 } else{
@@ -1860,7 +1874,7 @@ dirbklp:jsr basin
 
 dirfnlp:jsr basin	;read & print filename & filetype
 	beq direol	;...branch if eol
-!ifdef P500{
+!ifdef OPTI{
 	jsr getstat2
 	ldx status
 	bne disk_done	;...branch if error
@@ -1917,8 +1931,14 @@ asprtlp:lda mkeyd,y	; get from monitor key buffer
 	rts
 ; $ebae	setp load/save
 lsinit:	
+!ifdef OPTI{
+	ldy #DEFDEV
+	sty fa		;setup defaults: tape, fixed_load, no filename
+	ldy #1
+} else{
 	ldy #1
 	sty fa		;setup defaults: tape, fixed_load, no filename
+}
 	sty sa
 	dey		;(.y=0)
 	sty eas		;default l/s/v from/to bank 0
@@ -2011,7 +2031,7 @@ goto:
 	ldy yr
 	jmp (t0)	;jump to address
 
-!ifdef P500{
+!ifdef OPTI{
 getstat2:
 	pha
 	txa
@@ -2032,7 +2052,7 @@ getstat2:
 	pla
 	rts
 }
-!ifndef P500{
+!ifndef OPTI{
 *= $efff
 	!byte $ff
 }
