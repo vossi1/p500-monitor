@@ -1838,10 +1838,14 @@ dirchlp:iny
 	inx
 	lda buf,x	;get a character
 	bne dirchlp	;...loop until eol
+!ifdef OPTI{
+	jsr copyfnadr
+} else{
 	tya		;length
 	ldx txtptr	;fnadr low
 	ldy #>buf	;fnadr high
-	jsr setnam
+	jsr setnam	
+}
 	lda #0		;la
 	ldx t0		;fa
 	ldy #$60	;sa
@@ -2045,6 +2049,25 @@ goto:
 	jmp (t0)	;jump to address
 
 !ifdef OPTI{
+copyfnadr:
+	tya		;length
+	ldx i6509
+	ldy #irom
+	sty i6509	; switch to system bank
+
+	ldy #fnlen
+	sta (ptr),y
+	lda txtptr	;fnadr low
+	ldy #fnadr
+	sta (ptr),y
+	lda #>buf	;fnadr high
+	iny
+	sta (ptr),y
+	lda e6509	;fnadr bank
+	iny
+	sta (ptr),y
+	stx i6509	; restore ibank
+
 getstat2:
 	pha
 	txa
