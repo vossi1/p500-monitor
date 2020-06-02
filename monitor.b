@@ -1761,7 +1761,12 @@ dskdev: ldx t0		;get given device #
 	sta t0+2	;clear line # register (in case DIR cmd)
 	sta fnlen
 	tax
+!ifdef OPTI{
+	lda e6509
+	sta i6509
+} else{
 	jsr setbnk	;cmd string in in ram0 (in case DIR cmd)
+}
 
 	jsr gnc		;peek at first character of disk command
 	dec txtptr	;backup so we will re-get this character later
