@@ -8,11 +8,13 @@
 !cpu 6502
 !ct pet
 ; ########################################### TODO ################################################
+; ATTENTION: If basic is too long, jsr to this bank does not return !!!
+; ########################################### TODO ################################################
 ; Disk does not work - 4x fnadr instead of status
 ; gosub works only to same bank or bank 15	
 ; -------------------------------------------------------------------------------------------------
 ; switches
-P500	= 1
+;P500	= 1
 OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
@@ -1742,7 +1744,7 @@ disk:
 	sty ptr		; init pointer for status
 	sty ptr+1
 }
-	bne dskdev		;...branch if given device #
+	bne dskdev	;...branch if given device #
 	ldx #8		;default device number
 	!byte $2c	; skip next
 
