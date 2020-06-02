@@ -14,7 +14,7 @@
 ; gosub works only to same bank or bank 15	
 ; -------------------------------------------------------------------------------------------------
 ; switches
-;P500	= 1
+P500	= 1
 OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
@@ -25,9 +25,11 @@ OPTI	= 1	; optimizations
 }
 !ifdef OPTI{
 DISDEF	= 23		;bytes to disassemble by default
+MEMDEF	= 8		;lines to display memory
 DEFDEV 	= 8		;default device	
 } else{
 DISDEF	= 20		;bytes to disassemble by default
+MEMDEF	= 12		;lines to display memory
 }
 !ifdef P500{
 DEFBANK	= 0		;if no address, load to this bank 
@@ -366,7 +368,7 @@ dspmem:
 	jsr parse
 	bcc dspcalc	;got 'to', go dump
 
-dsp12l:	lda #11	  	;do 12 lines
+dsp12l:	lda #MEMDEF-1  	;do 12 lines
 	sta t0
 	bne dspdump	;always
 
