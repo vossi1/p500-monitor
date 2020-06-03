@@ -14,7 +14,7 @@
 ; gosub works only to same bank or bank 15	
 ; -------------------------------------------------------------------------------------------------
 ; switches
-;P500	= 1
+P500	= 1
 OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
@@ -542,7 +542,7 @@ compar:
 trnsfr:
 	lda #$80	;flag 'transfer'
 	sta verck
-	lda #$00
+	lda #0
 	sta dir
 	jsr range	;get source in t2, length in t1
 	bcs trnerr
@@ -561,9 +561,8 @@ trnok:	bit verck
 	sbc t0+1
 	bcs trnnxln	;branch if source >= destination
 
-;	clc
 	lda t1		;source < destination,   must work from back to front
-	adc t0
+	adc t0		;carry is already clear!
 	sta t0
 	lda t1+1	;add length to destination
 	adc t0+1
@@ -780,7 +779,13 @@ verify	lda #$80	;flag for verify
 	ldy t2+1
 	ora t2+2	;or verify flag to bank
 	jsr _load	;do load/verify
-	jmp lsstate	;print load/save result
+!ifdef OPTI{
+	lda verck
+	cmp #'v'	;check for verify
+	beq verchk
+	jmp main
+}
+verchk:	jmp lsstate	;print verify result
 ;******************************************************************
 ;	Fill command - F starting-address ending-address value
 ;******************************************************************
@@ -854,7 +859,7 @@ ashftmn:lsr
 
 aserr:	jmp error
 
-asstart:ldx #$02	;move output buffer index past crunched mnemonic
+asstart:ldx #2		;move output buffer index past crunched mnemonic
 
 asoplp:	lda count	;after first number copy everything else to output buffer
 	bne asopend
@@ -938,6 +943,7 @@ as240:  dex
 
 as250:  jsr tst2	;test a word,4 chars
 	jsr tst2
+
 as300:  lda t1	  	;check # chars of both
 	cmp temp
 	beq as310	;match, skip
@@ -1424,7 +1430,6 @@ evaddig:clc		;add current digit (all bases)
 eval_ng:
 	sec
 	!byte $24	; skip next
-
 eval_ok:
 	clc
 	sty shift	;return input base (used by 'assem')
@@ -1446,7 +1451,7 @@ putt2:	lda t2+2	;get bank (a19-a16)
 	lda t2		;get address (a15-a0)
 	ldx t2+1
 
-putwrd:  pha		;print address:  msb first, then lsb
+putwrd:	pha		;print address:  msb first, then lsb
 	txa
 	jsr puthex
 	pla
@@ -2020,13 +2025,18 @@ fparlp:	lda $0000,y
 	bne fparlp
 	stx i6509	; restore ibank
 	rts
-; $ebed print load/save state
-lsstate:jsr getstat	; get load/save state
+; $ebed print verify result 
+lsstate:jsr getstat	; get verify state
 	and #$10
 	bne lssterr	; error detected
 	jsr primm
+!ifdef OPTI{
+	!pet " ok", 0
+} else{
 	!pet cr, "ok", cr, 0
+}
 	jmp main
+
 lssterr:jsr primm
 	!pet " error", 0
 	jmp main
