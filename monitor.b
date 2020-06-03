@@ -11,7 +11,6 @@
 ; ATTENTION: If basic is too long, jsr to this bank does not return !!!
 ; ########################################### TODO ################################################
 ; Disk does not work - 4x fnadr instead of status
-; gosub works only to same bank or bank 15	
 ; -------------------------------------------------------------------------------------------------
 ; switches
 P500	= 1
