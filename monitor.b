@@ -14,7 +14,7 @@
 ; -------------------------------------------------------------------------------------------------
 ; switches
 ;P500	= 1
-;^OPTI	= 1	; optimizations
+;OPTI	= 1	;optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -32,10 +32,10 @@ MEMDEF	= 12		;lines to display memory
 }
 !ifdef P500{
 DEFBANK	= 0		;if no address, load to this bank 
-COLS	= 0		; 40 columns
+COLS	= 0		;40 columns
 } else{
 DEFBANK	= 1
-COLS	= 1		; 80 columns
+COLS	= 1		;80 columns
 }
 ; constants
 
@@ -149,7 +149,7 @@ break:  		;////// entry for 'brk'
 	jsr primm
 	!pet cr, "break", 7, 0
 !ifndef P500{
-	nop		; save 3 bytes for message "monitor500" ;)
+	nop		;save 3 bytes for message "monitor500" ;)
 	nop
 	nop
 }
@@ -157,16 +157,16 @@ break:  		;////// entry for 'brk'
 cpyregs:pla		;pull pc, registers & status off stack...
 	sta pch,x	;...and preserve them for display
 	dex
-	bpl cpyregs	; (notice pc will be wrong- processor bug)
+	bpl cpyregs	;(notice pc will be wrong- processor bug)
 	bmi start
 ; $e021
 call:			;////// entry for 'jmp' or 'sys'
 !ifdef P500{
 	lda #$00
-	sta mode	; set 40 column mode
+	sta mode	;set 40 column mode
 	nop
 } else{
-	jsr setmod	; set 40/80 col mode, disable bell for m-command if b-machine
+	jsr setmod	;set 40/80 col mode, disable bell for m-command if b-machine
 	lda #$00
 }
 	sta acc		;clear everything up for user
@@ -351,10 +351,10 @@ swbnk:	stx xsave	;save .x!
 
 getstat:ldx i6509	;remember ibank
 	lda #irom
-	sta i6509	; switch to system bank
+	sta i6509	;switch to system bank
 	ldy #status
-	lda (ptr),y	; get status
-	stx i6509	; restore ibank
+	lda (ptr),y	;get status
+	stx i6509	;restore ibank
 	rts
 !ifndef OPTI{
 !fill 10,$ff
@@ -1010,7 +1010,7 @@ as500: 	lda wrap	;get good op code
 	jsr makhex
 	sta mkeyd+5	;..and put that in the buffer, too.
 	stx mkeyd+6
-	jsr asprint	; print new assembler input line
+	jsr asprint	;print new assembler input line
 	nop
 	jmp main
 
@@ -1318,7 +1318,7 @@ parserr:pla		;pop this call
 	jmp error
 
 pareol:	sec		;set .c=1 for eol
-	!byte $24	; skip next
+	!byte $24	;skip next
 
 parok:	clc		;clear .c for not-eol
 	lda count	;set .z=1 for valid number
@@ -1428,7 +1428,7 @@ evaddig:clc		;add current digit (all bases)
 
 eval_ng:
 	sec
-	!byte $24	; skip next
+	!byte $24	;skip next
 eval_ok:
 	clc
 	sty shift	;return input base (used by 'assem')
@@ -1481,19 +1481,19 @@ puthex:	stx sxreg
 
 ; $e8d2 convert .a to 2 hex digits & put msb in .a, lsb in .x
 makhex:	pha
-	jsr maknib	; convert nibble
-	tax		; move low nibble to .x
+	jsr maknib	;convert nibble
+	tax		;move low nibble to .x
 	pla
-	lsr		; sift high nibble right and convert it to .a
+	lsr		;sift high nibble right and convert it to .a
 	lsr
 	lsr
 	lsr
 
 maknib:	and #$0f
 	cmp #$0a
-	bcc mak0_9	; number 0-9
-	adc #$06	; add 6+carry=7 for 'a-f
-mak0_9	adc #'0'	; add petscii '0'
+	bcc mak0_9	;number 0-9
+	adc #$06	;add 6+carry=7 for 'a-f
+mak0_9	adc #'0'	;add petscii '0'
 	rts
 
 ; $e8e7 get last character
@@ -1768,12 +1768,12 @@ binskzr:dex
 disk:
 !ifdef OPTI{
 	ldy #$00
-	sty ptr		; init pointer for status
+	sty ptr		;init pointer for status
 	sty ptr+1
 }
 	bne dskdev	;...branch if given device #
 	ldx #8		;default device number
-	!byte $2c	; skip next
+	!byte $2c	;skip next
 
 dskdev: ldx t0		;get given device #
 	cpx #4
@@ -1941,7 +1941,7 @@ setmod:
 	cmp #$00
 	bne +
 	lda #$ff
-	!byte $2c	; skip next
+	!byte $2c	;skip next
 +	lda #$00
 	sta mode
 	jsr primm
@@ -1950,26 +1950,26 @@ setmod:
 }
 ; $eb87	outsourced from assem - copy new line to kernal keyboard buffer
 asprint:lda #<keyd
-	sta ptr		; set ptr to kernal keyboard buffer
+	sta ptr		;set ptr to kernal keyboard buffer
 	lda #>keyd
 	sta ptr+1
-	ldx i6509	; remember ibank
+	ldx i6509	;remember ibank
 	lda #irom
-	sta i6509	; switch to system bank
+	sta i6509	;switch to system bank
 
-	ldy #7		; 8 chars
-asprtlp:lda mkeyd,y	; get from monitor key buffer
-	sta (ptr),y	; copy one char to kernal buffer
+	ldy #7		;8 chars
+asprtlp:lda mkeyd,y	;get from monitor key buffer
+	sta (ptr),y	;copy one char to kernal buffer
 	dey
 	bpl asprtlp
 
-	lda #<ndx	; set pointer to kernal keybuffer index
+	lda #<ndx	;set pointer to kernal keybuffer index
 	sta ptr
 	ldy #0
 	sty ptr+1
-	lda #8		; store 8 keys in buffer
+	lda #8		;store 8 keys in buffer
 	sta (ptr),y
-	stx i6509	; restore ibank
+	stx i6509	;restore ibank
 	rts
 ; $ebae	setp load/save
 lsinit:	
@@ -2000,31 +2000,31 @@ lsinit:
 	sta fnadr+1
 	lda e6509
 	sta fnadr+2
-	rts 		; .y has to be 0 for indirect in lodsav
+	rts 		;.y has to be 0 for indirect in lodsav
 ; $ebca copy file parameter for kernal routine to system bank
 fparcpy:
 	ldx i6509
 	lda #irom
-	sta i6509	; switch to system bank
+	sta i6509	;switch to system bank
 	lda #$00
-	sta ptr		; init pointer
+	sta ptr		;init pointer
 	sta ptr+1
-	ldy #sa		; end of file params
+	ldy #sa		;end of file params
 fparlp:	lda $00,y
-	sta (ptr),y	; copy file parm $90-$92, $96-$a0
+	sta (ptr),y	;copy file parm $90-$92, $96-$a0
 	dey
-	cpy #eal-1	; end of upper part list
+	cpy #eal-1	;end of upper part list
 	bne +
-	ldy #fnadr+2	; lower part of list
+	ldy #fnadr+2	;lower part of list
 	bne fparlp
-+	cpy #fnadr-1	; start of file params
++	cpy #fnadr-1	;start of file params
 	bne fparlp
-	stx i6509	; restore ibank
+	stx i6509	;restore ibank
 	rts
 ; $ebed print verify result 
-lsstate:jsr getstat	; get verify state
+lsstate:jsr getstat	;get verify state
 	and #$10
-	bne lssterr	; error detected
+	bne lssterr	;error detected
 	jsr primm
 !ifdef OPTI{
 	!pet " ok", 0
@@ -2090,7 +2090,7 @@ copyfnadr:
 	tya		;length
 	ldx i6509
 	ldy #irom
-	sty i6509	; switch to system bank
+	sty i6509	;switch to system bank
 
 	ldy #fnlen
 	sta (ptr),y
@@ -2103,7 +2103,7 @@ copyfnadr:
 	lda e6509	;fnadr bank
 	iny
 	sta (ptr),y
-	stx i6509	; restore ibank
+	stx i6509	;restore ibank
 
 getstat2:
 	pha
