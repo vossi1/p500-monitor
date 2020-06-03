@@ -14,7 +14,7 @@
 ; gosub works only to same bank or bank 15	
 ; -------------------------------------------------------------------------------------------------
 ; switches
-P500	= 1
+;P500	= 1
 OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
@@ -697,7 +697,7 @@ hunerr:	jmp error
 ;************************************************************
 ; $e337
 lodsav:
-	jsr lsinit	;init defaults
+	jsr lsinit	;init defaults, returns with .y = 0
 lsspc:  jsr gnc		;look for name
 !ifdef OPTI{
 	beq lserr	;cbm2 non-tape system has no load without name
@@ -715,7 +715,7 @@ lsnxchr:lda buf,x	;get chr
 	inx
 	cmp #$22	;pass everything up to closing quote
 	beq lsdev
-	sta (fnadr),y	;okay- always monitor bank
+	sta (fnadr),y	;okay - always monitor bank
 	inc fnlen
 	iny
 	cpy #17		;check length of name (16 max.)
@@ -729,6 +729,7 @@ lsdev:	stx txtptr
 	bcs lsload	;...eol, use default
 	lda t0
 	sta fa		;device # in 'fa' (let kernal catch invalid devices)
+
 	jsr parse	;get starting address
 	bcs lsload	;none, must be load
 	jsr t0tot2	;save start_addr in t2
@@ -741,15 +742,17 @@ lsdev:	stx txtptr
 	bne lserr
 	lda #0
 	sta sa
+; copy start+end address to kernal vars
 	ldx #2
 lsadrcp:lda t2,x
-	sta stal,x	;copy start adr kernal pointer
+	sta stal,x	;copy start adr
 	lda t0,x
-	sta eal,x	;copy end adr to kernal pointer
+	sta eal,x	;copy end adr
 	dex
 	bpl lsadrcp
+
 	jsr fparcpy	;copy file parameter to system bank
-	ldx #stal	;load parameter address for kernal routine
+	ldx #stal	;load parameter addresses for kernal routine
 	ldy #eal
 	jsr _save	;do save
 	jmp main
@@ -759,9 +762,9 @@ lsload: ldx #$ff
 	stx t2+1
 !ifdef OPTI{
 	ldx #DEFBANK
-	stx t2+2	;default bank
+	stx t2+2	;default is first ram bank 0/1
 }
-loadadr:lda #$00	;flag 'non-default load'
+loadadr:lda #0		;flag 'non-default load'
 	sta sa
 	jsr fparcpy	;copy file parameter to system bank
 
@@ -773,9 +776,9 @@ loadadr:lda #$00	;flag 'non-default load'
 	lda #0		;flag load
 	!byte $2c	;skip next
 verify	lda #$80	;flag for verify
-	ldx t2		;set up new address for load (bank already put in 'ba')
+	ldx t2		;set up new address for load
 	ldy t2+1
-	ora t2+2
+	ora t2+2	;or verify flag to bank
 	jsr _load	;do load/verify
 	jmp lsstate	;print load/save result
 ;******************************************************************
@@ -1973,23 +1976,30 @@ lsinit:
 	ldy #DEFDEV
 	sty fa		;setup defaults: tape, fixed_load, no filename
 	ldy #1
+	sty sa
+	dey		;(.y=0)
+	sty status
+	sty fnlen	;reset filename length
+	lda #DEFBANK
+	sta eas		;default l/s/v from/to first ram bank 0/1
+	sta stas
 } else{
 	ldy #1
 	sty fa		;setup defaults: tape, fixed_load, no filename
-}
 	sty sa
 	dey		;(.y=0)
 	sty eas		;default l/s/v from/to bank 0
 	sty stas	;default l/s/v from/to bank 0
 	sty status
 	sty fnlen	;default no filename
+}
 	lda #<xcnt
 	sta fnadr	;filename address in monitor bank
 	lda #>xcnt
 	sta fnadr+1
 	lda e6509
 	sta fnadr+2
-	rts
+	rts 		; .y has to be 0 for indirect in lodsav
 ; $ebca copy file parameter for kernal routine to system bank
 fparcpy:
 	ldx i6509
