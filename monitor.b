@@ -33,8 +33,10 @@ MEMDEF	= 12		;lines to display memory
 }
 !ifdef P500{
 DEFBANK	= 0		;if no address, load to this bank 
+COLS	= 0		; 40 columns
 } else{
 DEFBANK	= 1
+COLS	= 1		; 80 columns
 }
 ; constants
 
@@ -190,8 +192,8 @@ start:
 	cld
 	tsx
 	stx sp		;get stack pointer for register display
-	lda #$c0
-	jsr _setmsg	;enable kernal control & error messages
+	lda #$40+$80	;$40=kernal errors, $80=i/o messages to screen
+	jsr _setmsg	;enable error messages (sets msgflg = .a)
 	cli		;start monitor: fall thru 'dspreg' to 'main'
 ;***********************************************************
 ;	Display contents of storage registers
@@ -216,9 +218,9 @@ dsplp:	lda pcb,y
 	bcc dsplp
 ; $e08b main loop
 main:
-	jsr crlf	; print cr+lp
+	jsr crlf	;print cr+lp
 	ldx #0
-	stx txtptr
+	stx txtptr	;init ptr to textbuffer
 ; line input
 mainlp:	jsr basin	;read one line (up to <cr>) into buffer
 	sta buf,x
@@ -240,7 +242,7 @@ mgetchr:jsr gnc	  	;get a character from buffer
 	nop
 ; $e0b2
 moncmd:
-	ldx #$15	;compare first char to list of valid commands
+	ldx #cmdqty-1	;compare first char to list of valid commands
 mcmdlp:	cmp cmdchr,x
 	beq main1	;found it in list!
 	dex
@@ -363,24 +365,27 @@ getstat:ldx i6509	;remember ibank
 ;********************************************
 ; $e152
 dspmem:
-	bcs dsp12l	;no range, do 1/2 screen
+	bcs dspdef	;no range, do default lines
 	jsr t0tot2	;else move 'from' value into place
 	jsr parse
 	bcc dspcalc	;got 'to', go dump
 
-dsp12l:	lda #MEMDEF-1  	;do 12 lines
+dspdef:	lda #MEMDEF-1  	;do default lines
 	sta t0
 	bne dspdump	;always
 
 ; calculate # of lines
 dspcalc:jsr sub0m2	;calculate # bytes, put result in t0 (msb goes in .a)
 	bcc dsperr	;...branch if sa > ea
-
+; shift 3/4 bits right for 8/16 bytes per line
+!ifdef OPTI{
+	ldx #$03+COLS	;add 1 if 80 columns
+} else{
 	ldx #$03
 	bit mode	;divide by 8 if 40-col, 16 if 80-col
 	bpl dspshft
 	inx
-
+}
 dspshft:lsr t0+2	;shift msb right,
 	ror t0+1	;..into middle byte,
 	ror t0		;..and finally into lsb
@@ -391,11 +396,14 @@ dspdump:jsr stop	;is stop key down?
 	beq dspexit	;..if so, exit.
 
 	jsr dmpone
-	lda #$08
+!ifdef OPTI{
+	lda #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
+} else{
+	lda #8
 	bit mode	;add 8 (16 if 80-col) to line start address
 	bpl dsp40c
 	asl
-
+}
 dsp40c	jsr addt2
 	jsr dect0	;test if dump finished
 	bcs dspdump	;loop until underflow
@@ -413,7 +421,7 @@ setreg:
 setrlp:	jsr parse
 	bcs setrx	;quit anytime arg list is empty
 	lda t0
-	sta $0000+flgs,y
+	sta flgs,y
 	iny
 	cpy #5
 	bcc setrlp
@@ -432,13 +440,17 @@ setmlp:	jsr parse	;scan for next argument
 	lda t0		;get the byte to stash
 	jsr stash	;stash it
 	iny
+!ifdef OPTI{
+	cpy #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
+	bcc setmlp
+} else{
 	bit mode
 	bpl setm40c
 	cpy #16
 	bcc setmlp
 setm40c:cpy #8
 	bcc setmlp
-
+}
 setmx:	jsr primm	;clear all modes & cursor up
 	!pet esc, "o", $91, 0
 
@@ -482,12 +494,16 @@ dmpbylp:jsr putspc
 dmpentr:jsr fetch	;get a byte from memory
 	jsr puthex	;print hex byte
 	iny
+!ifdef OPTI{
+	cpy #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
+	bcc dmpbylp
+} else{
 	cpy #8		;8 bytes/line for 40-column mode
 	bit mode
 	bpl dmp40c
 	cpy #16		;16 bytes/line for 80-column mode
 dmp40c:	bcc dmpbylp
-
+}
 	jsr primm	;block off ascii dump & turn rvs on
 	!pet ":", $12, 0
 
@@ -502,12 +518,17 @@ dmpchlp:jsr fetch	;re-get byte from memory
 
 dmpskct:jsr bsout
 	iny
+!ifdef OPTI{
+	cpy #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
+	bcc dmpchlp
+} else{
 	bit mode
 	bpl dmp40c2
 	cpy #16
 	bcc dmpchlp
 dmp40c2:cpy #8
 	bcc dmpchlp
+}
 	rts
 ;********************************************
 ;	Transfer/Compare routines.
