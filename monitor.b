@@ -13,8 +13,8 @@
 ; Disk does not work - 4x fnadr instead of status
 ; -------------------------------------------------------------------------------------------------
 ; switches
-P500	= 1
-OPTI	= 1	; optimizations
+;P500	= 1
+;^OPTI	= 1	; optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -1493,7 +1493,6 @@ maknib:	and #$0f
 	cmp #$0a
 	bcc mak0_9	; number 0-9
 	adc #$06	; add 6+carry=7 for 'a-f
-
 mak0_9	adc #'0'	; add petscii '0'
 	rts
 
@@ -1514,7 +1513,7 @@ gnceol:	php
 	plp
 	rts
 
-;  move t0,t0+1,t0+2 to t2,t2+1,t2+2
+; move t0,t0+1,t0+2 to t2,t2+1,t2+2
 t0tot2: lda t0
 	sta t2
 	lda t0+1
@@ -1523,7 +1522,7 @@ t0tot2: lda t0
 	sta t2+2
 	rts
 
-;  subtract t2 from t0, result in t0
+; subtract t2 from t0, result in t0
 sub0m2:	sec
 	lda t0
 	sbc t2
@@ -1535,8 +1534,7 @@ sub0m2:	sec
 	sbc t2+2
 	sta t0+2	;note .c=0 indicates t0 < t2, thus t0 is negative!
 	rts
-;  decrement t0
-; $e922
+; $e922 decrement t0
 dect0:  lda #1
 
 subt0:  sta sxreg	;subtract .a from t2
@@ -1552,7 +1550,7 @@ subt0:  sta sxreg	;subtract .a from t2
 	sta t0+2
 	rts
 
-;  decrement t1
+; decrement t1
 dect1:  sec
 	lda t1
 	sbc #1
@@ -1668,7 +1666,6 @@ cvnobnk:lda t0
 	ldx #24		;number of digits
 	ldy #0		;number of shifts-1
 	jsr unpack_t0	;convert binary in hulp to ASCII & print it
-
 	jmp main
 
 ;  convert from binary to decimal (BCD)
@@ -2013,7 +2010,7 @@ fparcpy:
 	sta ptr		; init pointer
 	sta ptr+1
 	ldy #sa		; end of file params
-fparlp:	lda $0000,y
+fparlp:	lda $00,y
 	sta (ptr),y	; copy file parm $90-$92, $96-$a0
 	dey
 	cpy #eal-1	; end of upper part list
