@@ -13,8 +13,8 @@
 ; Disk does not work - 4x fnadr instead of status
 ; -------------------------------------------------------------------------------------------------
 ; switches
-;P500	= 1
-;OPTI	= 1	;optimizations
+P500	= 1
+OPTI	= 1	;optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -1766,11 +1766,6 @@ binskzr:dex
 ;	@[device-number][,command-string]
 ;********************************************
 disk:
-!ifdef OPTI{
-	ldy #$00
-	sty ptr		;init pointer for status
-	sty ptr+1
-}
 	bne dskdev	;...branch if given device #
 	ldx #8		;default device number
 	!byte $2c	;skip next
@@ -1785,12 +1780,12 @@ dskdev: ldx t0		;get given device #
 	lda #0
 	sta t0+2	;clear line # register (in case DIR cmd)
 	sta fnlen
-	tax
 !ifdef OPTI{
-	lda e6509
-	sta i6509
+	sta status
+	jsr fparcpy
 } else{
-	jsr setbnk	;cmd string in in ram0 (in case DIR cmd)
+	tax
+	jsr setbnk	;cmd string in ram0 (in case DIR cmd)
 }
 
 	jsr gnc		;peek at first character of disk command
@@ -1803,6 +1798,7 @@ dskdev: ldx t0		;get given device #
 	ldx t0		;fa
 	ldy #15		;sa
 	jsr setlfs
+clc
 	jsr open	;open disk command channel
 	bcs disk_done	;...branch on error
 
@@ -1824,23 +1820,37 @@ disk_st
 	jsr chkin	;make it an input channel
 	bcs disk_done	;...branch on error
 
+ldx #0	
+
 dskchlp:jsr basin	;get a character from disk
+!ifdef OPTI{
+	cmp #cr
+	beq done_erchk	;...branch if eol
+	jsr bsout	;print it
+	jsr getstat2
+	inx
+	lda status
+} else{
 	jsr bsout	;print it
 	cmp #cr
 	beq disk_done	;...branch if eol
-!ifdef OPTI{
-	jsr getstat2
-	lda status
-} else{
 	lda fnadr
 }
 	and #$bf	;strip eoi bit
 	beq dskchlp	;...loop until error or eol
 
+bne disk_done
+
 !ifdef OPTI{
 disk_err:
 	jmp error
 }
+
+done_erchk:
+cpx#0
+bne disk_done 
+jsr primm
+!pet "i/o error",0
 
 disk_done:
 	jsr clrch
@@ -2104,6 +2114,7 @@ copyfnadr:
 	iny
 	sta (ptr),y
 	stx i6509	;restore ibank
+	rts
 
 getstat2:
 	pha
