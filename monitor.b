@@ -1798,7 +1798,9 @@ dskdev: ldx t0		;get given device #
 	ldx t0		;fa
 	ldy #15		;sa
 	jsr setlfs
+!ifdef OPTI{
 clc
+}
 	jsr open	;open disk command channel
 	bcs disk_done	;...branch on error
 
@@ -1820,7 +1822,9 @@ disk_st
 	jsr chkin	;make it an input channel
 	bcs disk_done	;...branch on error
 
-ldx #0	
+!ifdef OPTI{
+	ldx #0
+}
 
 dskchlp:jsr basin	;get a character from disk
 !ifdef OPTI{
@@ -1839,18 +1843,18 @@ dskchlp:jsr basin	;get a character from disk
 	and #$bf	;strip eoi bit
 	beq dskchlp	;...loop until error or eol
 
+!ifdef OPTI{
 bne disk_done
 
-!ifdef OPTI{
 disk_err:
 	jmp error
-}
 
 done_erchk:
 cpx#0
 bne disk_done 
 jsr primm
 !pet "i/o error",0
+}
 
 disk_done:
 	jsr clrch
