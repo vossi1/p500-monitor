@@ -49,6 +49,7 @@ e6509	= $00		;6509 execution bank reg
 
 ;only in bank 15
 ndx	= $d1		;kernal keyboard buffer index
+bellmd	= $039f		;Bell on/off flag (80 column only)
 keyd	= $03ab		;10by kernal keyboard buffer
 
 ; used by monitor-kernal
@@ -162,13 +163,29 @@ cpyregs:pla		;pull pc, registers & status off stack...
 	bmi start
 ; $e021
 call:			;////// entry for 'jmp' or 'sys'
+!ifdef OPTI{
+	!ifndef P500{
+	lda #<bellmd	;set pointer to bell flag
+	sta ptr
+	lda #>bellmd
+	sta ptr+1
+	ldx i6509	;remember ibank
+	lda #irom
+	sta i6509	;switch to system bank
+	ldy #$00
+	sta (ptr),y	;disable bell (some value > 0)
+	stx i6509	;restore ibank	
+	tya
+	}
+} else{
 !ifdef P500{
 	lda #$00
 	sta mode	;set 40 column mode
 	nop
-} else{
+	} else{
 	jsr setmod	;set 40/80 col mode, disable bell for m-command if b-machine
 	lda #$00
+	}
 }
 	sta acc		;clear everything up for user
 	sta xr
