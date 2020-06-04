@@ -790,10 +790,11 @@ verify	lda #$80	;flag for verify
 	ora t2+2	;or verify flag to bank
 	jsr _load	;do load/verify
 !ifdef OPTI{
+	bcs verifyx
 	lda verck
 	cmp #'v'	;check for verify
 	beq verchk
-	jmp main
+verifyx:jmp main
 }
 verchk:	jmp lsstate	;print verify result
 ;******************************************************************
