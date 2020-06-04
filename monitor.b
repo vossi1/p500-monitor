@@ -193,7 +193,7 @@ start:
 	tsx
 	stx sp		;get stack pointer for register display
 	lda #$40+$80	;$40=kernal errors, $80=i/o messages to screen
-	jsr _setmsg	;enable error messages (sets msgflg = .a)
+	jsr _setmsg	;enable kernal i/o error messages (sets msgflg = .a)
 	cli		;start monitor: fall thru 'dspreg' to 'main'
 ;***********************************************************
 ;	Display contents of storage registers
@@ -1843,7 +1843,7 @@ disk_st
 !ifdef OPTI{
 	jsr basin	;get a character from disk
 	cmp #cr
-	beq dskioer	;...i/o error if first char cr
+	beq nodever	;...no device? if first char cr
 dskchlp:jsr bsout	;print it
 	jsr basin	;get a character from disk
 	cmp #cr
@@ -1863,9 +1863,9 @@ dskchlp:jsr basin	;get a character from disk
 disk_err:
 	jmp error
 
-dskioer:
+nodever:
 jsr primm
-!pet "i/o error",0
+!pet "no device?",0
 }
 disk_done:
 	jsr clrch
