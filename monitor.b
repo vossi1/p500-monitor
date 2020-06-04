@@ -13,8 +13,8 @@
 ; Disk does not work - 4x fnadr instead of status
 ; -------------------------------------------------------------------------------------------------
 ; switches
-;P500	= 1
-;OPTI	= 1	;optimizations
+P500	= 1
+OPTI	= 1	;optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -735,7 +735,9 @@ lsdev:	stx txtptr
 
 	jsr parse	;get ending address
 	bcs loadadr	;none...must be 'alternate load'
+!ifndef OPTI{
 	jsr crlf	;prep for 'saving...' msg
+}
 	lda verck
 	cmp #'s'	;check that this is a save
 	bne lserr
@@ -754,7 +756,15 @@ lsadrcp:lda t2,x
 	ldx #stal	;load parameter addresses for kernal routine
 	ldy #eal
 	jsr _save	;do save
+!ifdef OPTI{
+	lda #0
+	sta fnlen
+	sta buf
+	sta txtptr
+	jmp chksave
+} else{
 	jmp main
+}
 
 lsload: ldx #$ff
 	stx t2		;load to saved address
@@ -1786,7 +1796,6 @@ dskdev: ldx t0		;get given device #
 	sta t0+2	;clear line # register (in case DIR cmd)
 	sta fnlen	;reset command string length for status
 !ifdef OPTI{
-	sta status	;clear status
 	sta la		;set logical index
 } else{
 	tax
@@ -1800,20 +1809,20 @@ dskdev: ldx t0		;get given device #
 
 ; open disk command channel & pass it given command
 !ifdef OPTI{
-	lda #15		;command channel
+chksave:lda #15		;command channel
 	sta sa		;set secondary address
 	jsr fparcpy	;copy file parameter to system bank
-clc
+	clc
 } else{
 	lda #0		;la
 	ldx t0		;fa
 	ldy #15		;sa
 	jsr setlfs
 }
-	jsr open	;open disk command channel
+	jsr open	;open disk command channel (c=0)
 	bcs disk_done	;...branch on error
 
-	ldx #0
+	ldx #0		;logical index
 	jsr chkout	;make it an output channel
 	bcs disk_done	;...branch on error
 
