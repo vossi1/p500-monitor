@@ -13,7 +13,7 @@
 ; 
 ; -------------------------------------------------------------------------------------------------
 ; switches
-P500	= 1
+;P500	= 1
 OPTI	= 1	;optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
@@ -52,39 +52,17 @@ ndx	= $d1		;kernal keyboard buffer index
 bellmd	= $039f		;Bell on/off flag (80 column only)
 keyd	= $03ab		;10by kernal keyboard buffer
 
-; used by monitor-kernal
-;tpiptr	= $41		;pointer to TPI (used in IRQ !)
-;ipoint	= $ac		;tx routine usage
-
-; used bey monitor + monitor-kernal
-tmpbnk	= $30		;temporaray ibank storage
-ptr	= $5d		;2by pointer keyd,status / primm pointer to message char
-
-
-; monitor zp
-pcb	= $02		;shadow regs
-pch	= $03
-pcl	= $04
-flgs	= $05
-acc	= $06
-xr	= $07
-yr	= $08
-sp	= $09
-
-temp	= $5f		;use basic fac for monitor zp
-
-t0	= $60		;3by pointer
-t1	= $63		;3by pointer
-t2	= $66		;3by pointer
-
-txtptr	= $7a
-verck	= $93		;verify flag
-mode	= $d7		;40/80 column mode
+;mode	= $d7		;40/80 column mode
 
 ; kernal definitions - shadows of bank 15 
 fnadr	= $90		;3by Address of file name string
 			;  low, high, bank
-; $93-$95 not used
+; monitor zp
+verck	= $93		;verify flag
+temp	= $94		;use basic fac for monitor zp
+txtptr	= $95
+
+; kernal definitions - shadows of bank 15 
 eal	= $96		;3by End of load/save
 eah	= $97		;  low, high, bank
 eas	= $98
@@ -97,14 +75,38 @@ la	= $9e		;Current logical index
 fa	= $9f		;Current first address
 sa	= $a0		;Current secondary address
 
+; monitor zp
+pcb	= $a1		;shadow regs
+pch	= $a2
+pcl	= $a3
+flgs	= $a4
+acc	= $a5
+xr	= $a6
+yr	= $a7
+sp	= $a8
+
+; used bey monitor + monitor-kernal
+tmpbnk	= $a9		;temporaray ibank storage
+ptr	= $aa		;2by pointer keyd,status / primm pointer to message char
+
+; used by monitor-kernal
+;ipoint	= $ac		;2by tx routine usage
+;tpiptr	= $ae		;2by pointer to TPI (used in IRQ !)
+
+; monitor zp
+t0	= $b0		;3by pointer
+t1	= $b3		;3by pointer
+t2	= $b6		;3by pointer
+
+
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
 
 !ifndef OPTI{bad=$0100}	;fbuffr
-buf	= $0200		;160by input buffer
+buf	= $ef40		;160by input buffer
+xcnt	= $efe0		;32by compare buffer
 
 mkeyd	= $034a		;10by monitor keyboard buffer
-xcnt	= $0380		;32by compare buffer
 hulp	= $03a0		;10by buffer
 format	= $03aa		;asm
 length	= $03ab		;asm/dis

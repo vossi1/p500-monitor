@@ -18,11 +18,11 @@ irom	= $f		; System bank
 ; zero page
 e6509	= $00		; 6509 execution bank reg
 i6509	= $01		; 6509 indirect bank reg
-ipoint	= $ac		; tx routine usage
 
-ptr	= $5d		; 2 bytes pointer to message char
-tmpbnk	= $30		; temporaray ibank storage
-tpiptr	= $41		; pointer to TPI
+tmpbnk	= $a9		; temporaray ibank storage
+ptr	= $aa		; 2 bytes pointer to message char
+ipoint	= $ac		; tx routine usage
+tpiptr	= $ae		; pointer to TPI
 ; -------------------------------------------------------------------------------------------------
 ; absolute
 
