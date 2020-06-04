@@ -163,8 +163,12 @@ cpyregs:pla		;pull pc, registers & status off stack...
 	bmi start
 ; $e021
 call:			;////// entry for 'jmp' or 'sys'
+!ifdef P500{
+	lda #$00
+	sta mode	;set 40 column mode
+	nop
+} else{
 !ifdef OPTI{
-	!ifndef P500{
 	lda #<bellmd	;set pointer to bell flag
 	sta ptr
 	lda #>bellmd
@@ -176,12 +180,6 @@ call:			;////// entry for 'jmp' or 'sys'
 	sta (ptr),y	;disable bell (some value > 0)
 	stx i6509	;restore ibank	
 	tya
-	}
-} else{
-!ifdef P500{
-	lda #$00
-	sta mode	;set 40 column mode
-	nop
 	} else{
 	jsr setmod	;set 40/80 col mode, disable bell for m-command if b-machine
 	lda #$00
