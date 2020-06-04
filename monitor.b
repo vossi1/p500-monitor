@@ -10,7 +10,7 @@
 ; ########################################### TODO ################################################
 ; ATTENTION: If basic is too long, jsr to this bank does not return !!!
 ; ########################################### TODO ################################################
-; Disk does not work - 4x fnadr instead of status
+; 
 ; -------------------------------------------------------------------------------------------------
 ; switches
 P500	= 1
@@ -1789,6 +1789,8 @@ dskdev: ldx t0		;get given device #
 	bcs baddev
 !ifdef OPTI{
 	stx fa		;set first address
+	lda e6509
+	sta fnadr+2	;set filename bank (in case DIR cmd)
 } else{
 	stx t0
 }
@@ -1862,17 +1864,23 @@ dskchlp:jsr basin	;get a character from disk
 
 !ifdef OPTI{
 baddev:
-	jmp error
+	jmp error	;bad device number error
+
+dir_done:
+	cpy #3
+	bne disk_done
+	jsr crlf
 
 nodev:
 jsr primm
-!pet "no device?",0
+!pet "no device?",0	;if only got cr, no dev present error
 }
+
 disk_done:
-	jsr clrch
-	lda #$00
+	jsr clrch	;clear channel
+	lda #0		;la
 	sec
-	jsr close
+	jsr close	;close device (c=1)
 	jmp main
 
 !ifndef OPTI{
@@ -1896,8 +1904,6 @@ dirchlp:iny
 	sta fnadr
 	lda #>buf
 	sta fnadr+1
-	lda e6509
-	sta fnadr+2
 	lda #$60
 	sta sa
 	jsr fparcpy	;copy file parameter to system bank
@@ -1927,17 +1933,19 @@ dirlp:  sty t1		;loop counter
 dirbklp:jsr basin
 	sta t0		;get # blocks low
 !ifdef OPTI{
-	jsr getstat2
+	jsr getdirstat
 	lda status
+	bne dir_done	;...branch if error
 } else{
 	lda fnadr
-}
 	bne disk_done	;...branch if error
+}
 	jsr basin
 	sta t0+1	;get # blocks high
 !ifdef OPTI{
-	jsr getstat2
+	jsr getdirstat
 	lda status
+	bne dir_done	;...branch if error
 } else{
 	lda fnadr
 	bne disk_done	;...branch if error
@@ -1959,7 +1967,7 @@ dirbklp:jsr basin
 dirfnlp:jsr basin	;read & print filename & filetype
 	beq direol	;...branch if eol
 !ifdef OPTI{
-	jsr getstat2
+	jsr getdirstat
 	ldx status
 	bne disk_done	;...branch if error
 } else{
@@ -2152,7 +2160,7 @@ copyfnadr:
 	stx i6509	;restore ibank
 	rts
 
-getstat2:
+getdirstat:
 	pha
 	txa
 	pha
