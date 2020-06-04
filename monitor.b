@@ -13,8 +13,8 @@
 ; Disk does not work - 4x fnadr instead of status
 ; -------------------------------------------------------------------------------------------------
 ; switches
-P500	= 1
-OPTI	= 1	;optimizations
+;P500	= 1
+;OPTI	= 1	;optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -22,10 +22,10 @@ OPTI	= 1	;optimizations
 	!to "monitor.prg", cbm
 	!initmem $ff
 }
+DEFDEV 	= 8		;default device	
 !ifdef OPTI{
 DISDEF	= 23		;bytes to disassemble by default
 MEMDEF	= 8		;lines to display memory
-DEFDEV 	= 8		;default device	
 } else{
 DISDEF	= 20		;bytes to disassemble by default
 MEMDEF	= 12		;lines to display memory
@@ -92,6 +92,7 @@ stah	= $9a		;  low, high, bank
 stas	= $9b
 status	= $9c		;I/O operation status
 fnlen	= $9d		;File name length
+la	= $9e		;Current logical index
 fa	= $9f		;Current first address
 sa	= $a0		;Current secondary address
 
@@ -1767,7 +1768,7 @@ binskzr:dex
 ;********************************************
 disk:
 	bne dskdev	;...branch if given device #
-	ldx #8		;default device number
+	ldx #DEFDEV	;default device number
 	!byte $2c	;skip next
 
 dskdev: ldx t0		;get given device #
@@ -1775,14 +1776,18 @@ dskdev: ldx t0		;get given device #
 	bcc disk_err	;...branch if bad device #
 	cpx #31
 	bcs disk_err
+!ifdef OPTI{
+	stx fa		;set first address
+} else{
 	stx t0
+}
 
 	lda #0
 	sta t0+2	;clear line # register (in case DIR cmd)
-	sta fnlen
+	sta fnlen	;reset command string length for status
 !ifdef OPTI{
-	sta status
-	jsr fparcpy
+	sta status	;clear status
+	sta la		;set logical index
 } else{
 	tax
 	jsr setbnk	;cmd string in ram0 (in case DIR cmd)
@@ -1793,13 +1798,17 @@ dskdev: ldx t0		;get given device #
 	cmp #'$'
 	beq disk_dir	;...branch if directory read
 
-;  open disk command channel & pass it given command
+; open disk command channel & pass it given command
+!ifdef OPTI{
+	lda #15		;command channel
+	sta sa		;set secondary address
+	jsr fparcpy	;copy file parameter to system bank
+clc
+} else{
 	lda #0		;la
 	ldx t0		;fa
 	ldy #15		;sa
 	jsr setlfs
-!ifdef OPTI{
-clc
 }
 	jsr open	;open disk command channel
 	bcs disk_done	;...branch on error
@@ -1823,39 +1832,32 @@ disk_st
 	bcs disk_done	;...branch on error
 
 !ifdef OPTI{
-	ldx #0
-}
-
-dskchlp:jsr basin	;get a character from disk
-!ifdef OPTI{
+	jsr basin	;get a character from disk
 	cmp #cr
-	beq done_erchk	;...branch if eol
-	jsr bsout	;print it
-	jsr getstat2
-	inx
-	lda status
+	beq dskioer	;...i/o error if first char cr
+dskchlp:jsr bsout	;print it
+	jsr basin	;get a character from disk
+	cmp #cr
+	beq disk_done	;...branch if eol
+	bne dskchlp	;...loop until error or eol
 } else{
+dskchlp:jsr basin	;get a character from disk
 	jsr bsout	;print it
 	cmp #cr
 	beq disk_done	;...branch if eol
 	lda fnadr
-}
 	and #$bf	;strip eoi bit
 	beq dskchlp	;...loop until error or eol
+}
 
 !ifdef OPTI{
-bne disk_done
-
 disk_err:
 	jmp error
 
-done_erchk:
-cpx#0
-bne disk_done 
+dskioer:
 jsr primm
 !pet "i/o error",0
 }
-
 disk_done:
 	jsr clrch
 	lda #$00
