@@ -1784,9 +1784,9 @@ disk:
 
 dskdev: ldx t0		;get given device #
 	cpx #4
-	bcc disk_err	;...branch if bad device #
+	bcc baddev	;...branch if bad device #
 	cpx #31
-	bcs disk_err
+	bcs baddev
 !ifdef OPTI{
 	stx fa		;set first address
 } else{
@@ -1802,7 +1802,7 @@ dskdev: ldx t0		;get given device #
 	tax
 	jsr setbnk	;cmd string in ram0 (in case DIR cmd)
 }
-
+	
 	jsr gnc		;peek at first character of disk command
 	dec txtptr	;backup so we will re-get this character later
 	cmp #'$'
@@ -1833,9 +1833,9 @@ dsknxch:ldx txtptr	;get next character
 	beq disk_st	;...branch if eol
 	jsr bsout	;xmit character to disk
 	bcc dsknxch	;...loop until error or eol
-
+;read & report disk status
 disk_st
-	jsr clrch	;read & report disk status
+	jsr clrch	;clear channel
 	jsr crlf
 	ldx #0
 	jsr chkin	;make it an input channel
@@ -1844,7 +1844,7 @@ disk_st
 !ifdef OPTI{
 	jsr basin	;get a character from disk
 	cmp #cr
-	beq nodever	;...no device? if first char cr
+	beq nodev	;...no device? if first char cr
 dskchlp:jsr bsout	;print it
 	jsr basin	;get a character from disk
 	cmp #cr
@@ -1861,10 +1861,10 @@ dskchlp:jsr basin	;get a character from disk
 }
 
 !ifdef OPTI{
-disk_err:
+baddev:
 	jmp error
 
-nodever:
+nodev:
 jsr primm
 !pet "no device?",0
 }
@@ -1876,10 +1876,10 @@ disk_done:
 	jmp main
 
 !ifndef OPTI{
-disk_err:
+baddev:
 	jmp error
 }
-
+; read & display the disk directory
 disk_dir:
 	ldy #$ff	;determine directory string length
 	ldx txtptr
@@ -1889,24 +1889,37 @@ dirchlp:iny
 	inx
 	lda buf,x	;get a character
 	bne dirchlp	;...loop until eol
+
 !ifdef OPTI{
-	jsr copyfnadr
+	sty fnlen
+	lda txtptr
+	sta fnadr
+	lda #>buf
+	sta fnadr+1
+	lda e6509
+	sta fnadr+2
+	lda #$60
+	sta sa
+	jsr fparcpy	;copy file parameter to system bank
+	clc
 } else{
 	tya		;length
 	ldx txtptr	;fnadr low
 	ldy #>buf	;fnadr high
 	jsr setnam	
-}
 	lda #0		;la
 	ldx t0		;fa
 	ldy #$60	;sa
 	jsr setlfs
+}
 	jsr open	;open directory channel
 	bcs disk_done	;...branch on error
 	ldx #0
 	jsr chkin	;make it an input channel
 
-	jsr crlf
+!ifndef OPTI{
+	jsr crlf	;start a new line
+}
 
 	ldy #3		;first pass only- trash first two bytes read
 
@@ -1927,11 +1940,14 @@ dirbklp:jsr basin
 	lda status
 } else{
 	lda fnadr
-}
 	bne disk_done	;...branch if error
+}
 	dec t1
 	bne dirbklp	;...loop until done
 
+!ifdef OPTI{
+	jsr crlf	;start a new line
+}
 	jsr bindec	;convert # blocks to decimal
 	lda #0		;no leading zeros
 	ldx #8		;max digits
@@ -1953,8 +1969,12 @@ dirfnlp:jsr basin	;read & print filename & filetype
 	jsr bsout
 	bcc dirfnlp	;...loop always
 
-direol:	jsr crlf	;start a new line
+direol:
+!ifndef OPTI{
+	jsr crlf	;start a new line
+}
 	jsr stop
+
 	beq disk_done	;...branch if user hit STOP
 	ldy #2
 	bne dirlp	;...loop always
