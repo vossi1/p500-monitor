@@ -7,7 +7,7 @@ Necessary:
 - P500 patched kernal by vossi
 - P500 patched basic (sys command redirected to kernal)
 
-state 5.6.2020:
+v1.0 - 5.6.2020:
 - choose in source with p500 switch what you want to assemble
 - kernal and loader are same for p500 and 600/700 version
 - most vars are in zp from $90 to $db, monitor needs $e000-$efff
