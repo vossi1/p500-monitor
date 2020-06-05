@@ -7,6 +7,13 @@ Necessary:
 - P500 patched kernal by vossi
 - P500 patched basic (sys command redirected to kernal)
 
+state 5.6.2020:
+- choose in source with p500 switch what you want to assemble
+- kernal and loader are same for p500 and 600/700 version
+- most vars are in zp from $90 to $db, monitor needs $e000-$efff
+- kernal must be in all ram banks at $fe000 for j-command (jsr)
+- no known bugs?
+
 fix01 dv forgot to change original-adr $eaa8 fnlen $b7 -> $9d
 fix02 change 4x fa in assembler to temp
 fix03 jump to goto was 2 bytes too short - one extra pha in go command! 

@@ -9,12 +9,12 @@
 !ct pet
 ; ########################################### TODO ################################################
 ; ATTENTION: If basic is too long, jsr to this bank does not return !!!
-; ########################################### INFO ################################################
-; The monitor uses $90-$db,$e000-$efff in monitor bank and $fe00-$ffff in all banks
+; ########################################### TODO ################################################
+; 
 ; -------------------------------------------------------------------------------------------------
 ; switches
-;P500	= 1		; switch betweeen p500 and 600/700 version
-			; the kernal and the loader are same for both versions
+P500	= 1
+OPTI	= 1	;optimizations
 !ifdef P500{
 	!to "monitor500.prg", cbm
 	!initmem $00
@@ -23,8 +23,13 @@
 	!initmem $ff
 }
 DEFDEV 	= 8		;default device	
+!ifdef OPTI{
 DISDEF	= 23		;bytes to disassemble by default
 MEMDEF	= 8		;lines to display memory
+} else{
+DISDEF	= 20		;bytes to disassemble by default
+MEMDEF	= 12		;lines to display memory
+}
 !ifdef P500{
 DEFBANK	= 0		;if no address, load to this bank 
 COLS	= 0		;40 columns
@@ -47,15 +52,39 @@ ndx	= $d1		;kernal keyboard buffer index
 bellmd	= $039f		;Bell on/off flag (80 column only)
 keyd	= $03ab		;10by kernal keyboard buffer
 
+; used by monitor-kernal
+;tpiptr	= $41		;pointer to TPI (used in IRQ !)
+;ipoint	= $ac		;tx routine usage
+
+; used bey monitor + monitor-kernal
+tmpbnk	= $30		;temporaray ibank storage
+ptr	= $5d		;2by pointer keyd,status / primm pointer to message char
+
+
+; monitor zp
+pcb	= $02		;shadow regs
+pch	= $03
+pcl	= $04
+flgs	= $05
+acc	= $06
+xr	= $07
+yr	= $08
+sp	= $09
+
+temp	= $5f		;use basic fac for monitor zp
+
+t0	= $60		;3by pointer
+t1	= $63		;3by pointer
+t2	= $66		;3by pointer
+
+txtptr	= $7a
+verck	= $93		;verify flag
+mode	= $d7		;40/80 column mode
+
 ; kernal definitions - shadows of bank 15 
 fnadr	= $90		;3by Address of file name string
 			;  low, high, bank
-; monitor zp
-verck	= $93		;verify flag
-temp	= $94		;use basic fac for monitor zp
-txtptr	= $95
-
-; kernal definitions - shadows of bank 15 
+; $93-$95 not used
 eal	= $96		;3by End of load/save
 eah	= $97		;  low, high, bank
 eas	= $98
@@ -68,50 +97,26 @@ la	= $9e		;Current logical index
 fa	= $9f		;Current first address
 sa	= $a0		;Current secondary address
 
-; monitor zp
-pcb	= $a1		;shadow regs
-pch	= $a2
-pcl	= $a3
-flgs	= $a4
-acc	= $a5
-xr	= $a6
-yr	= $a7
-sp	= $a8
-
-; used bey monitor + monitor-kernal
-tmpbnk	= $a9		;temporaray ibank storage
-ptr	= $aa		;2by pointer keyd,status / primm pointer to message char
-
-; used by monitor-kernal
-;ipoint	= $ac		;2by tx routine usage
-;tpiptr	= $ae		;2by pointer to TPI (used in IRQ !)
-
-; monitor zp
-t0	= $b0		;3by pointer
-t1	= $b3		;3by pointer
-t2	= $b6		;3by pointer
-
-mkeyd	= $b9		;10by monitor keyboard buffer
-hulp	= $c3		;10by buffer
-format	= $cd		;asm
-length	= $ce		;asm/dis
-msal	= $cf		;3by for assembler
-sxreg	= $d2		;1 byte temp used all over
-wrap	= $d3		;1 byte temp for assembler
-xsave	= $d4		;save .x here during indirect subroutine calls
-dir	= $d5		;direction indicator for 'transfer'
-count	= $d6		;parse number conversion
-number	= $d7		;parse number conversion
-shift	= $d8		;parse number conversion
-temps	= $d9		;3 temp bytes
-;-db
 ; -------------------------------------------------------------------------------------------------
 ; absolute monitor storage
 
 !ifndef OPTI{bad=$0100}	;fbuffr
-buf	= $ef00		;160by input buffer (must start at page!!!)
-xcnt	= $efa0		;32by compare buffer
+buf	= $0200		;160by input buffer
 
+mkeyd	= $034a		;10by monitor keyboard buffer
+xcnt	= $0380		;32by compare buffer
+hulp	= $03a0		;10by buffer
+format	= $03aa		;asm
+length	= $03ab		;asm/dis
+msal	= $03ac		;3by for assembler
+sxreg	= $03af		;1 byte temp used all over
+wrap	= $03b1		;1 byte temp for assembler
+xsave	= $03b2		;save .x here during indirect subroutine calls
+dir	= $03b3		;direction indicator for 'transfer'
+count	= $03b4		;parse number conversion
+number	= $03b5		;parse number conversion
+shift	= $03b6		;parse number conversion
+temps	= $03b7		;3 temp bytes
 ; -------------------------------------------------------------------------------------------------
 ; system entrys
 primm	= $ff3f		;print message routine
@@ -141,23 +146,26 @@ monitor:
 	jmp call	;'jmp' entry
 mbreak:	jmp break	;'brk' entry
 	jmp moncmd	;command parser
-; break entry
+; $e009
 break:  		;////// entry for 'brk'
 	jsr primm
 	!pet cr, "break", 7, 0
+!ifndef P500{
+	nop		;save 3 bytes for message "monitor500" ;)
+	nop
+	nop
+}
 	ldx #5
 cpyregs:pla		;pull pc, registers & status off stack...
 	sta pch,x	;...and preserve them for display
 	dex
 	bpl cpyregs	;(notice pc will be wrong- processor bug)
 	bmi start
-; jump entry
+; $e021
 call:			;////// entry for 'jmp' or 'sys'
-!ifdef P500{
-	lda #$00
-} else{
-; disable column bell b-series
-	ldy #<bellmd	;set pointer to bell flag
+!ifdef OPTI{
+	!ifndef P500{
+	lda #<bellmd	;set pointer to bell flag
 	sta ptr
 	lda #>bellmd
 	sta ptr+1
@@ -168,6 +176,16 @@ call:			;////// entry for 'jmp' or 'sys'
 	sta (ptr),y	;disable bell (some value > 0)
 	stx i6509	;restore ibank	
 	tya
+	}
+} else{
+!ifdef P500{
+	lda #$00
+	sta mode	;set 40 column mode
+	nop
+	} else{
+	jsr setmod	;set 40/80 col mode, disable bell for m-command if b-machine
+	lda #$00
+	}
 }
 	sta acc		;clear everything up for user
 	sta xr
@@ -186,6 +204,7 @@ call:			;////// entry for 'jmp' or 'sys'
 
 	!pet cr, "monitor", 0
 }
+; $e046
 start:  
 	cld
 	tsx
@@ -196,6 +215,7 @@ start:
 ;***********************************************************
 ;	Display contents of storage registers
 ;***********************************************************
+; $e050
 dspreg:
 	jsr primm	;register legends
 	!pet cr, "    pc  sr ac xr yr sp"
@@ -213,7 +233,7 @@ dsplp:	lda pcb,y
 	iny
 	cpy #8
 	bcc dsplp
-; main loop
+; $e08b main loop
 main:
 	jsr crlf	;print cr+lp
 	ldx #0
@@ -234,19 +254,22 @@ mgetchr:jsr gnc	  	;get a character from buffer
 	beq main	;end of line
 	cmp #' '	;skip leading spaces
 	beq mgetchr
-; search command
+	nop
+	nop
+	nop
+; $e0b2
 moncmd:
 	ldx #cmdqty-1	;compare first char to list of valid commands
 mcmdlp:	cmp cmdchr,x
 	beq main1	;found it in list!
 	dex
 	bpl mcmdlp
-; checked entire list, not found. fall into 'error'
+; $e0c2			;checked entire list, not found. fall into 'error'
 error:
 	jsr primm
 	!pet $1d, "?", 0
 	jmp main
-; do command
+; $e0c9
 main1:
 	cpx #cmdls	;is command 'L'oad, 'S'ave, or 'V'erify?
 	bcs mcmdls	;...branch if so:  can't use parse!
@@ -268,10 +291,11 @@ mcmdls:	sta verck	;save copy of what command was,
 	jmp lodsav	;...and jump to common load/save/verify routine
 
 mcmdno	jmp convert	;simply evaluate number & print its value
-; exit monitor
+; $e0e3
 exit:
 	rts
-; command table
+	!byte $00, $00
+; $e0e6
 cmdchr
 	!byte 'a'	;assemble
 	!byte 'c'	;compare
@@ -289,24 +313,22 @@ cmdchr
 	!byte '.'	;alter assembly
 	!byte '>'	;alter memory
 	!byte ';'	;alter regs
-cmdno	= *-cmdchr
 
-; number bases
+cmdno	= *-cmdchr
 cmdnum
 	!byte '$'	;base-16 (hex)
 	!byte '+'	;base-10 (dec)
 	!byte '&'	;base-8  (oct)
 	!byte '%'	;base-2  (bin)
+
 cmdls	= *-cmdchr	;  (l,s & v must be last in table)
 
-; disk commands
 	!byte 'l'	;load memory
 	!byte 's'	;save memory
 	!byte 'v'	;verify memory
 
-cmdqty	= *-cmdchr	;command quantity
-
-; command routines vector table
+cmdqty	= *-cmdchr
+; $e1fc
 cmdtbl:
 	!word assem-1
 	!word compar-1
@@ -326,7 +348,7 @@ cmdtbl:
 	!word setmem-1
 	!word setreg-1
 
-; crossbank subroutines
+; $e11a crossbank subroutines
 fetch:	jsr swbnk
 	lda (t2),y	;get byte 
 	jmp restbnk
@@ -345,7 +367,6 @@ swbnk:	stx xsave	;save .x!
 	stx i6509
 	rts
 
-; get disk status
 getstat:ldx i6509	;remember ibank
 	lda #irom
 	sta i6509	;switch to system bank
@@ -353,10 +374,13 @@ getstat:ldx i6509	;remember ibank
 	lda (ptr),y	;get status
 	stx i6509	;restore ibank
 	rts
-
+!ifndef OPTI{
+!fill 10,$ff
+}
 ;********************************************
 ;	Display memory command
 ;********************************************
+; $e152
 dspmem:
 	bcs dspdef	;no range, do default lines
 	jsr t0tot2	;else move 'from' value into place
@@ -371,7 +395,14 @@ dspdef:	lda #MEMDEF-1  	;do default lines
 dspcalc:jsr sub0m2	;calculate # bytes, put result in t0 (msb goes in .a)
 	bcc dsperr	;...branch if sa > ea
 ; shift 3/4 bits right for 8/16 bytes per line
+!ifdef OPTI{
 	ldx #$03+COLS	;add 1 if 80 columns
+} else{
+	ldx #$03
+	bit mode	;divide by 8 if 40-col, 16 if 80-col
+	bpl dspshft
+	inx
+}
 dspshft:lsr t0+2	;shift msb right,
 	ror t0+1	;..into middle byte,
 	ror t0		;..and finally into lsb
@@ -382,7 +413,14 @@ dspdump:jsr stop	;is stop key down?
 	beq dspexit	;..if so, exit.
 
 	jsr dmpone
+!ifdef OPTI{
 	lda #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
+} else{
+	lda #8
+	bit mode	;add 8 (16 if 80-col) to line start address
+	bpl dsp40c
+	asl
+}
 dsp40c	jsr addt2
 	jsr dect0	;test if dump finished
 	bcs dspdump	;loop until underflow
@@ -393,6 +431,7 @@ dsperr:	jmp error
 ;********************************************
 ;	Set register command
 ;********************************************
+; $e194
 setreg:
 	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
 	ldy #0
@@ -404,10 +443,10 @@ setrlp:	jsr parse
 	cpy #5
 	bcc setrlp
 setrx:	jmp main
-
 ;********************************************
 ;	Alter memory command
 ;********************************************
+; $e1ab
 setmem:
 	bcs setmx	;...branch if no arguments- just regurgitate existing data
 	jsr t0tot2	;destination bank, addr in 't2'
@@ -418,78 +457,48 @@ setmlp:	jsr parse	;scan for next argument
 	lda t0		;get the byte to stash
 	jsr stash	;stash it
 	iny
+!ifdef OPTI{
 	cpy #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
 	bcc setmlp
+} else{
+	bit mode
+	bpl setm40c
+	cpy #16
+	bcc setmlp
+setm40c:cpy #8
+	bcc setmlp
+}
 setmx:	jsr primm	;clear all modes & cursor up
 	!pet esc, "o", $91, 0
 
 	jsr dmpone
 	jmp main
-
 ;********************************************************************
 ;	Go command- start executing at either the supplied address,
 ;	   or (default) the current contents of the PC reg
 ;********************************************************************
-; go jumps only to same bank and exits to basic
+; $e1d6 go jumps only to same bank !!!
 go:
 	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
 
 	ldx sp
 	txs		;set up stack pointer
-
-goto:	lda pch
-	sta t0+1	;store address to t0
-	lda pcl
-	sta t0
-	lda acc		;load shadow regs
-	ldx xr
-	ldy yr
-	jmp (t0)	;jump to address
-
-;********************************************************************
-;	Jsr command- start executing at either the supplied address,
-;	   or (default) the current contents of the PC reg.
-;	   return is to monitor 'main' loop.
-;********************************************************************
-gosub:
-	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
-	lda pcb
-	cmp e6509
-	beq gosmbnk	;branch if adrress is in monitor bank
-	jsr gofobnk	;gosub foreign bank
-	jmp main
-
-gofobnk:sei		;disable interrrupts
-	clc
-	lda pcl
-	adc #$02	;load address and add +2
-	tax
-	lda pch
-	adc #$00	;add hi
-	pha		;push target +2 to stack
-	txa
-	pha
-	lda flgs	;push regs to stack
-	pha
-	lda pcb
-	sta i6509	;set bank
-	lda acc
-	ldx xr
-	ldy yr
-	pha
-	jmp exsub3	;jump to address in foreign bank
-
-gosmbnk:
-	lda #>(main-1)	;store main as return address
-	pha
-	lda #<(main-1)
-	pha
 	jmp goto
-
+; gosub moved to the end
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
 ;********************************************
 ;	Subroutine to dump one line
 ;	of memory on screen
 ;********************************************
+; $e1e8
 dmpone:	
 	jsr crlf
 	lda #'>'	;print dump prompt
@@ -502,8 +511,16 @@ dmpbylp:jsr putspc
 dmpentr:jsr fetch	;get a byte from memory
 	jsr puthex	;print hex byte
 	iny
+!ifdef OPTI{
 	cpy #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
 	bcc dmpbylp
+} else{
+	cpy #8		;8 bytes/line for 40-column mode
+	bit mode
+	bpl dmp40c
+	cpy #16		;16 bytes/line for 80-column mode
+dmp40c:	bcc dmpbylp
+}
 	jsr primm	;block off ascii dump & turn rvs on
 	!pet ":", $12, 0
 
@@ -518,10 +535,18 @@ dmpchlp:jsr fetch	;re-get byte from memory
 
 dmpskct:jsr bsout
 	iny
+!ifdef OPTI{
 	cpy #8*(COLS+1)	;8/16 bytes per line for 40/80 columns
 	bcc dmpchlp
+} else{
+	bit mode
+	bpl dmp40c2
+	cpy #16
+	bcc dmpchlp
+dmp40c2:cpy #8
+	bcc dmpchlp
+}
 	rts
-
 ;********************************************
 ;	Transfer/Compare routines.
 ;
@@ -613,12 +638,12 @@ trnback:jsr dect1
 	bcs trnlp
 
 trnx:	jmp main
-
 ;******************************************************************
 ;	Hunt command - hunt for bytes or string
 ;
 ; syntax:  h 0000 1111 'ascii...   <or>   h 0000 1111 22 33 44 ...
 ;******************************************************************
+; $e2ce
 hunt:
 	jsr range	;get sa in t2, calculate length, put in t1
 	bcs hunerr	;...error if eol
@@ -639,6 +664,11 @@ hunnxch:sta xcnt,y
 	beq hunstrt	;yes-go look for it
 
 hunhex:	
+!ifdef OPTI{
+;!fill 3, $ff
+} else{
+	sty bad		;zero for rdob
+}
 	jsr pargot	;finish hex read
 
 hunnxhx:lda t0
@@ -674,7 +704,6 @@ hundiff:jsr stop
 hunx:	jmp main
 
 hunerr:	jmp error
-
 ;************************************************************
 ; load/save/verify
 ;
@@ -682,26 +711,15 @@ hunerr:	jmp error
 ; v ["name"] [,device_number] [,alt_load_address]
 ; s "name", device_number, starting_address, ending_address
 ;************************************************************
+; $e337
 lodsav:
-	ldy #DEFDEV
-	sty fa		;setup defaults: tape, fixed_load, no filename
-	ldy #1
-	sty sa
-	dey		;(.y=0)
-	sty status
-	sty fnlen	;reset filename length
-	lda #DEFBANK
-	sta eas		;default l/s/v from/to first ram bank 0/1
-	sta stas
-	lda #<xcnt
-	sta fnadr	;filename address in monitor bank
-	lda #>xcnt
-	sta fnadr+1
-	lda e6509
-	sta fnadr+2
-
+	jsr lsinit	;init defaults, returns with .y = 0
 lsspc:  jsr gnc		;look for name
+!ifdef OPTI{
 	beq lserr	;cbm2 non-tape system has no load without name
+} else{
+	beq lsload	;branch if no name (must be default load)
+}
 	cmp #' '
 	beq lsspc	;skip spaces
 	cmp #$22	;quote
@@ -713,7 +731,6 @@ lsnxchr:lda buf,x	;get chr
 	inx
 	cmp #$22	;pass everything up to closing quote
 	beq lsdev
-			;.y already 0
 	sta (fnadr),y	;okay - always monitor bank
 	inc fnlen
 	iny
@@ -735,6 +752,9 @@ lsdev:	stx txtptr
 
 	jsr parse	;get ending address
 	bcs loadadr	;none...must be 'alternate load'
+!ifndef OPTI{
+	jsr crlf	;prep for 'saving...' msg
+}
 	lda verck
 	cmp #'s'	;check that this is a save
 	bne lserr
@@ -753,17 +773,23 @@ lsadrcp:lda t2,x
 	ldx #stal	;load parameter addresses for kernal routine
 	ldy #eal
 	jsr _save	;do save
+!ifdef OPTI{
 	lda #0
 	sta fnlen
 	sta buf
 	sta txtptr
 	jmp chksave
+} else{
+	jmp main
+}
 
 lsload: ldx #$ff
 	stx t2		;load to saved address
 	stx t2+1
+!ifdef OPTI{
 	ldx #DEFBANK
 	stx t2+2	;default is first ram bank 0/1
+}
 loadadr:lda #0		;flag 'non-default load'
 	sta sa
 	jsr fparcpy	;copy file parameter to system bank
@@ -780,27 +806,21 @@ verify	lda #$80	;flag for verify
 	ldy t2+1
 	ora t2+2	;or verify flag to bank
 	jsr _load	;do load/verify
+!ifdef OPTI{
 	bcs verifyx
 	lda verck
 	cmp #'v'	;check for verify
 	beq verchk
 verifyx:jmp main
-
-; print verify result 
-verchk:	jsr getstat	;get verify state
-	and #$10
-	bne lssterr	;error detected
-	jsr primm
-	!pet " ok", 0
-	jmp main
-
-lssterr:jsr primm
-	!pet " error", 0
-	jmp main
-
+}
+verchk:	jmp lsstate	;print verify result
 ;******************************************************************
 ;	Fill command - F starting-address ending-address value
 ;******************************************************************
+!ifndef OPTI{
+!fill 16, $ff
+}
+; $e3db
 fill:
 	jsr range	;sa in t2, len in t1
 	bcs filerr	;error if eol
@@ -824,12 +844,12 @@ fillp:  lda t0
 filx:	jmp main
 
 filerr:	jmp error
-
 ;**********************************************************
 ;  simple assembler
 ;  syntax:      a 1111 lda ($00,x)
 ; 	      a 1111 dex:		(':' = terminator)
 ;**********************************************************
+; $e406
 assem:
 	bcs aserr	;...branch if missing sa
 	jsr t0tot2	;save sa
@@ -1026,6 +1046,7 @@ as500: 	lda wrap	;get good op code
 aerr:	jmp error
 
 ;  test char in .a with char in hulp
+;
 tst2:	jsr tstrx	;test for '00' (do two tests)
 
 tstrx:	stx sxreg
@@ -1043,33 +1064,10 @@ tst10:	inc temp
 	ldx sxreg	;restore x
 	rts
 
-; copy new line to kernal keyboard buffer
-asprint:lda #<keyd
-	sta ptr		;set ptr to kernal keyboard buffer
-	lda #>keyd
-	sta ptr+1
-	ldx i6509	;remember ibank
-	lda #irom
-	sta i6509	;switch to system bank
-
-	ldy #7		;8 chars
-asprtlp:lda mkeyd,y	;get from monitor key buffer
-	sta (ptr),y	;copy one char to kernal buffer
-	dey
-	bpl asprtlp
-
-	lda #<ndx	;set pointer to kernal keybuffer index
-	sta ptr
-	ldy #0
-	sty ptr+1
-	lda #8		;store 8 keys in buffer
-	sta (ptr),y
-	stx i6509	;restore ibank
-	rts
-
 ;***************************************************
 ;	Mini disassembler
 ;***************************************************
+; $e599
 disasm:
 	bcs dishpag	;use a default length from current sa
 	jsr t0tot2
@@ -1178,6 +1176,7 @@ pcadj4:	adc t2
 pcrts:	rts
 
 ; disassembler digest routine
+; $e659
 dset:	tay
 	lsr	    	;even/odd test
 	bcc ieven
@@ -1232,6 +1231,7 @@ mnndx3:	dey
 
 ; print mnemonic
 ; enter x=3 characters
+; $e6a1
 prmne:	tay
 	lda mneml,y	;fetch 3 char mnemonic
 	sta t1
@@ -1252,7 +1252,6 @@ prmn2:	asl t1+1	;shift 5 bits of char
 	bne prmn1
 	jmp putspc	;finish with space
 
-; assembler - disassembler decoding tables
 nmode:
 	!byte $40,2,$45,3
 	!byte $d0,8,$40,9
@@ -1328,7 +1327,7 @@ pargot:
 ;	.x & .y are preserved, .a contains # digits read.
 ;
 ;	if error, call is popped & 'jmp error' performed.
-
+; $e7a8
 parse:  jsr eval	;evaluate ascii input as a number
 	bcs parserr	;...branch if error
 	jsr glc		;re-get last character
@@ -1360,7 +1359,7 @@ parok:	clc		;clear .c for not-eol
 ;	.c=1  error  return
 ;	.z=1  null input
 ;	.x & .y are preserved.
-
+; $e7cf
 eval:	lda #0
 	sta t0		;clear value
 	sta t0+1
@@ -1472,7 +1471,7 @@ eval_ok:
 bases:	!byte 16,10, 8, 2
 shifts:	!byte  4, 3, 3, 1
 
-; print t2 as 5 hex digits:	BHHLL
+; $8892 print t2 as 5 hex digits:	BHHLL
 putt2:	lda t2+2	;get bank (a19-a16)
 	jsr makhex	;make ascii:  msd in .a (ignored) and lsd in .x
 	txa
@@ -1509,7 +1508,7 @@ puthex:	stx sxreg
 	ldx sxreg
 	jmp bsout
 
-; convert .a to 2 hex digits & put msb in .a, lsb in .x
+; $e8d2 convert .a to 2 hex digits & put msb in .a, lsb in .x
 makhex:	pha
 	jsr maknib	;convert nibble
 	tax		;move low nibble to .x
@@ -1526,10 +1525,10 @@ maknib:	and #$0f
 mak0_9	adc #'0'	;add petscii '0'
 	rts
 
-; get last character
+; $e8e7 get last character
 glc:	dec txtptr
 
-; get next character: return in .a  (return = if buffer empty or eol)
+; $e8e9 get next character: return in .a  (return = if buffer empty or eol)
 gnc:	stx sxreg
 	ldx txtptr
 	lda buf,x
@@ -1564,8 +1563,7 @@ sub0m2:	sec
 	sbc t2+2
 	sta t0+2	;note .c=0 indicates t0 < t2, thus t0 is negative!
 	rts
-
-; decrement t0
+; $e922 decrement t0
 dect0:  lda #1
 
 subt0:  sta sxreg	;subtract .a from t2
@@ -1606,7 +1604,7 @@ addt2:  clc	      	;add .a to t2
 	inc t2+2
 addt2x:	rts
 
-; decrement t2
+;  decrement t2
 dect2:  sec
 	lda t2
 	sbc #1
@@ -1629,9 +1627,9 @@ t0topc:	bcs t0topcx	;no arg given, just exit
 	stx pcb
 t0topcx:rts
 
-; read a range - put sa in t2, count in t1   (save ea in 'temps')
-; returns .c=0 if okay, .c=1 if error (missing parameter or sa < ea)
-
+;  read a range - put sa in t2, count in t1   (save ea in 'temps')
+;
+;  returns .c=0 if okay, .c=1 if error (missing parameter or sa < ea)
 range:  bcs rangex	;...branch if missing sa
 	jsr t0tot2	;move sa from t0 to t2
 	jsr parse	;get ea
@@ -1658,7 +1656,7 @@ range:  bcs rangex	;...branch if missing sa
 rangex:	sec		;bad  stuff exits here
 	rts
 
-; convert given number from its base to hex
+;  convert given number from its base to hex
 convert:
 	jsr pargot	;parse number & put its value in t0
 	jsr new_line
@@ -1806,14 +1804,23 @@ dskdev: ldx t0		;get given device #
 	bcc baddev	;...branch if bad device #
 	cpx #31
 	bcs baddev
+!ifdef OPTI{
 	stx fa		;set first address
 	lda e6509
 	sta fnadr+2	;set filename bank (in case DIR cmd)
+} else{
+	stx t0
+}
 
 	lda #0
 	sta t0+2	;clear line # register (in case DIR cmd)
 	sta fnlen	;reset command string length for status
+!ifdef OPTI{
 	sta la		;set logical index
+} else{
+	tax
+	jsr setbnk	;cmd string in ram0 (in case DIR cmd)
+}
 	
 	jsr gnc		;peek at first character of disk command
 	dec txtptr	;backup so we will re-get this character later
@@ -1821,10 +1828,17 @@ dskdev: ldx t0		;get given device #
 	beq disk_dir	;...branch if directory read
 
 ; open disk command channel & pass it given command
+!ifdef OPTI{
 chksave:lda #15		;command channel
 	sta sa		;set secondary address
 	jsr fparcpy	;copy file parameter to system bank
 	clc
+} else{
+	lda #0		;la
+	ldx t0		;fa
+	ldy #15		;sa
+	jsr setlfs
+}
 	jsr open	;open disk command channel (c=0)
 	bcs disk_done	;...branch on error
 
@@ -1846,6 +1860,7 @@ disk_st
 	jsr chkin	;make it an input channel
 	bcs disk_done	;...branch on error
 
+!ifdef OPTI{
 	jsr basin	;get a character from disk
 	cmp #cr
 	beq nodev	;...no device? if first char cr
@@ -1854,18 +1869,29 @@ dskchlp:jsr bsout	;print it
 	cmp #cr
 	beq disk_done	;...branch if eol
 	bne dskchlp	;...loop until error or eol
+} else{
+dskchlp:jsr basin	;get a character from disk
+	jsr bsout	;print it
+	cmp #cr
+	beq disk_done	;...branch if eol
+	lda fnadr
+	and #$bf	;strip eoi bit
+	beq dskchlp	;...loop until error or eol
+}
 
+!ifdef OPTI{
 baddev:
 	jmp error	;bad device number error
 
 dir_done:
-	cpy #3		;checks if first dir byte is cr -> no device
+	cpy #3
 	bne disk_done
 	jsr crlf
 
 nodev:
 jsr primm
 !pet "no device?",0	;if only got cr, no dev present error
+}
 
 disk_done:
 	jsr clrch	;clear channel
@@ -1874,6 +1900,10 @@ disk_done:
 	jsr close	;close device (c=1)
 	jmp main
 
+!ifndef OPTI{
+baddev:
+	jmp error
+}
 ; read & display the disk directory
 disk_dir:
 	ldy #$ff	;determine directory string length
@@ -1885,6 +1915,7 @@ dirchlp:iny
 	lda buf,x	;get a character
 	bne dirchlp	;...loop until eol
 
+!ifdef OPTI{
 	sty fnlen
 	lda txtptr
 	sta fnadr
@@ -1894,27 +1925,54 @@ dirchlp:iny
 	sta sa
 	jsr fparcpy	;copy file parameter to system bank
 	clc
+} else{
+	tya		;length
+	ldx txtptr	;fnadr low
+	ldy #>buf	;fnadr high
+	jsr setnam	
+	lda #0		;la
+	ldx t0		;fa
+	ldy #$60	;sa
+	jsr setlfs
+}
 	jsr open	;open directory channel
 	bcs disk_done	;...branch on error
 	ldx #0
 	jsr chkin	;make it an input channel
+
+!ifndef OPTI{
+	jsr crlf	;start a new line
+}
 
 	ldy #3		;first pass only- trash first two bytes read
 
 dirlp:  sty t1		;loop counter
 dirbklp:jsr basin
 	sta t0		;get # blocks low
+!ifdef OPTI{
 	jsr getdirstat
 	lda status
-	bne dir_done	;...branch if error, possibly no device?
+	bne dir_done	;...branch if error
+} else{
+	lda fnadr
+	bne disk_done	;...branch if error
+}
 	jsr basin
 	sta t0+1	;get # blocks high
+!ifdef OPTI{
 	jsr getdirstat
 	lda status
-	bne dir_done	;...branch if error, possibly no device?
+	bne dir_done	;...branch if error
+} else{
+	lda fnadr
+	bne disk_done	;...branch if error
+}
 	dec t1
 	bne dirbklp	;...loop until done
+
+!ifdef OPTI{
 	jsr crlf	;start a new line
+}
 	jsr bindec	;convert # blocks to decimal
 	lda #0		;no leading zeros
 	ldx #8		;max digits
@@ -1925,42 +1983,180 @@ dirbklp:jsr basin
 
 dirfnlp:jsr basin	;read & print filename & filetype
 	beq direol	;...branch if eol
+!ifdef OPTI{
 	jsr getdirstat
 	ldx status
 	bne disk_done	;...branch if error
+} else{
+	ldx fnadr
+	bne disk_done	;...branch if error
+}
 	jsr bsout
 	bcc dirfnlp	;...loop always
 
 direol:
+!ifndef OPTI{
+	jsr crlf	;start a new line
+}
 	jsr stop
+
 	beq disk_done	;...branch if user hit STOP
 	ldy #2
 	bne dirlp	;...loop always
 
-; copy file parameter for kernal routine to system bank
+!ifdef P500{
+;!fill 21, $ff
+} else{
+setmod:
+	lda hw_irq
+	cmp #$00
+	bne +
+	lda #$ff
+	!byte $2c	;skip next
++	lda #$00
+	sta mode
+	jsr primm
+	!pet esc, "h", 0
+	rts
+}
+; $eb87	outsourced from assem - copy new line to kernal keyboard buffer
+asprint:lda #<keyd
+	sta ptr		;set ptr to kernal keyboard buffer
+	lda #>keyd
+	sta ptr+1
+	ldx i6509	;remember ibank
+	lda #irom
+	sta i6509	;switch to system bank
+
+	ldy #7		;8 chars
+asprtlp:lda mkeyd,y	;get from monitor key buffer
+	sta (ptr),y	;copy one char to kernal buffer
+	dey
+	bpl asprtlp
+
+	lda #<ndx	;set pointer to kernal keybuffer index
+	sta ptr
+	ldy #0
+	sty ptr+1
+	lda #8		;store 8 keys in buffer
+	sta (ptr),y
+	stx i6509	;restore ibank
+	rts
+; $ebae	setp load/save
+lsinit:	
+!ifdef OPTI{
+	ldy #DEFDEV
+	sty fa		;setup defaults: tape, fixed_load, no filename
+	ldy #1
+	sty sa
+	dey		;(.y=0)
+	sty status
+	sty fnlen	;reset filename length
+	lda #DEFBANK
+	sta eas		;default l/s/v from/to first ram bank 0/1
+	sta stas
+} else{
+	ldy #1
+	sty fa		;setup defaults: tape, fixed_load, no filename
+	sty sa
+	dey		;(.y=0)
+	sty eas		;default l/s/v from/to bank 0
+	sty stas	;default l/s/v from/to bank 0
+	sty status
+	sty fnlen	;default no filename
+}
+	lda #<xcnt
+	sta fnadr	;filename address in monitor bank
+	lda #>xcnt
+	sta fnadr+1
+	lda e6509
+	sta fnadr+2
+	rts 		;.y has to be 0 for indirect in lodsav
+; $ebca copy file parameter for kernal routine to system bank
 fparcpy:
 	ldx i6509
 	lda #irom
 	sta i6509	;switch to system bank
-
 	lda #$00
 	sta ptr		;init pointer
 	sta ptr+1
-
 	ldy #sa		;end of file params
 fparlp:	lda $00,y
 	sta (ptr),y	;copy file parm $90-$92, $96-$a0
 	dey
 	cpy #eal-1	;end of upper part list
-	bne fparskp
+	bne +
 	ldy #fnadr+2	;lower part of list
 	bne fparlp
-fparskp:cpy #fnadr-1	;start of file params
++	cpy #fnadr-1	;start of file params
 	bne fparlp
-
 	stx i6509	;restore ibank
 	rts
-; copy fnadr and fn length to system bank
+; $ebed print verify result 
+lsstate:jsr getstat	;get verify state
+	and #$10
+	bne lssterr	;error detected
+	jsr primm
+!ifdef OPTI{
+	!pet " ok", 0
+} else{
+	!pet cr, "ok", cr, 0
+}
+	jmp main
+
+lssterr:jsr primm
+	!pet " error", 0
+	jmp main
+;********************************************************************
+;	Jsr command- start executing at either the supplied address,
+;	   or (default) the current contents of the PC reg.
+;	   return is to monitor 'main' loop.
+;********************************************************************
+gosub:
+	jsr t0topc	;copy adr & bank to pcl,h & pcb,  if given
+	lda pcb
+	cmp e6509
+	beq gosmbnk	;branch if adrress is in monitor bank
+	jsr gofobnk	;gosub foreign bank
+	jmp main
+
+gofobnk:sei		;disable interrrupts
+	clc
+	lda pcl
+	adc #$02	;load address and add +2
+	tax
+	lda pch
+	adc #$00	;add hi
+	pha		;push target +2 to stack
+	txa
+	pha
+	lda flgs	;push regs to stack
+	pha
+	lda pcb
+	sta i6509	;set bank
+	lda acc
+	ldx xr
+	ldy yr
+	pha
+	jmp exsub3	;jump to address in foreign bank
+
+gosmbnk:
+	lda #>(main-1)	;store main as return address
+	pha
+	lda #<(main-1)
+	pha
+; goto routine continued
+goto:
+	lda pch
+	sta t0+1	;store address to t0
+	lda pcl
+	sta t0
+	lda acc		;load shadow regs
+	ldx xr
+	ldy yr
+	jmp (t0)	;jump to address
+
+!ifdef OPTI{
 copyfnadr:
 	tya		;length
 	ldx i6509
@@ -1978,25 +2174,21 @@ copyfnadr:
 	lda e6509	;fnadr bank
 	iny
 	sta (ptr),y
-
 	stx i6509	;restore ibank
 	rts
-; copies status from systembank to monitor bank
+
 getdirstat:
 	pha
 	txa
 	pha
 	tya
 	pha
-
 	ldx i6509	;remember ibank
 	lda #irom
 	sta i6509	;switch to system bank
-
 	ldy #status
 	lda (ptr),y	;get status
 	sta status
-
 	stx i6509	;restore ibank
 	pla
 	tay
@@ -2004,3 +2196,8 @@ getdirstat:
 	tax
 	pla
 	rts
+}
+!ifndef OPTI{
+*= $efff
+	!byte $ff
+}
